@@ -56,9 +56,21 @@ function startWebhookServer(bot) {
     res.end(JSON.stringify({ ok: false, error: 'Noma\'lum endpoint' }));
   });
 
-  server.listen(config.LOCAL_API_PORT, '127.0.0.1', () => {
-    console.log(`Local Webhook API: http://127.0.0.1:${config.LOCAL_API_PORT}`);
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`⚠️ Diqqat: Port ${config.LOCAL_API_PORT} allaqachon band. Webhook server ishga tushmadi (boshqa instansiya faol bo'lishi mumkin).`);
+    } else {
+      console.error('Webhook server xatosi:', err.message);
+    }
   });
+
+  try {
+    server.listen(config.LOCAL_API_PORT, '127.0.0.1', () => {
+      console.log(`Local Webhook API: http://127.0.0.1:${config.LOCAL_API_PORT}`);
+    });
+  } catch (e) {
+    console.warn(`Webhook listen xatosi: ${e.message}`);
+  }
 
   return server;
 }

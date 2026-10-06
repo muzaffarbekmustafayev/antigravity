@@ -23,6 +23,14 @@ const ui = require('./ui');
 function initBot() {
   const bot = new TelegramBot(config.TOKEN, { polling: true });
 
+  bot.on('polling_error', (err) => {
+    if (err && err.message && err.message.includes('409 Conflict')) {
+      console.warn('⚠️ Diqqat: Boshqa bot instansiyasi ishga tushgan (409 Conflict). Faqat bitta bot instansiyasi ishlashi kerak.');
+    } else {
+      console.error('Telegram polling xatosi:', err.message);
+    }
+  });
+
   const sendHtml = (chatId, text, options) =>
     bot.sendMessage(chatId, text, Object.assign({ parse_mode: 'HTML' }, options || {}))
       .catch((err) => {
