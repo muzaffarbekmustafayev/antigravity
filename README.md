@@ -22,12 +22,13 @@
 ## 🇺🇸 English
 
 ### 🌟 Overview
-**Antigravity Remote Terminal Bot** is a secure, multi-session Telegram bridge that connects your Telegram chat directly to your local computer's terminal and Google Antigravity (AGY) coding agent. It allows developers to supervise coding tasks, execute commands, switch AI reasoning models, monitor API usage limits, and send/receive files remotely.
+**Antigravity Remote Terminal Bot** is a secure, multi-session Telegram bridge that connects your Telegram chat directly to your local computer's terminal and Google Antigravity (AGY) coding agent. It allows developers to supervise coding tasks, execute commands, switch AI reasoning models and speeds, monitor 5-hour rolling API usage limits, and send/receive files remotely.
 
 ### ✨ Key Features
-- **🤖 Multi-Model AI Switching:** Switch seamlessly between top-tier models (`Gemini 3.7 Flash`, `Gemini 3.7 Pro`, `Gemini 3.6 Flash`, `Gemini 3.1 Pro`, `Claude Sonnet 4.6`, `Claude Opus 4.6`, `GPT-OSS 120B`) with custom reasoning effort flags.
-- **📂 Multi-Session Management:** Run multiple independent terminal/AGY sessions concurrently with isolated working directories and histories.
-- **📊 Usage & Limit Tracker (`/limit`):** Visual progress bar and rate limit stats (RPM, RPD, TPM) for Google & Anthropic models.
+- **🤖 Official Antigravity AI Models:** Switch seamlessly between latest models (`Gemini 3.8 Flash`, `Gemini 3.7 Flash`, `Gemini 3.6 Flash`, `Gemini 3.1 Pro`, `Claude Sonnet 4.6`, `Claude Opus 4.6`, `GPT-OSS 120B`).
+- **⚡ Reasoning Effort & Speed Control:** Toggle between `Low (Fast / Low compute)`, `Medium (Balanced)`, and `High (Deep reasoning / Highest quality)`.
+- **⏱️ 5-Hour Rolling Limit Tracker (`/limit`):** Real-time monitoring of your 5-hour quota window, countdown timer until the earliest slot recovers, and breakdown per model and effort tier.
+- **📂 Interactive Session Management (`/sessions`):** Interactive session cards with directory controls, model/effort switcher, conversation reset, rename, and process kill.
 - **📤 Telegram File Bridge (`/get` & Local API):** Download files from your machine directly to Telegram, or let AGY send generated files via local HTTP webhook.
 - **🔒 Admin-Only Security:** Access restricted strictly to your `ADMIN_CHAT_ID`. All unauthorized users are immediately rejected.
 - **🛑 Real-time Process Control:** Kill long-running or stuck processes anytime with inline buttons.
@@ -38,7 +39,7 @@
 
 #### 1. Prerequisites
 - [Node.js](https://nodejs.org/) (v18 or newer)
-- [Antigravity CLI](https://antigravity.google) (`agy`) installed and configured in your PATH
+- [Antigravity CLI](https://antigravity.google) (`agy`) installed on your system (auto-detected)
 
 #### 2. Setup Bot
 1. Open [@BotFather](https://t.me/BotFather) in Telegram and create a new bot to get your `BOT_TOKEN`.
@@ -46,33 +47,26 @@
 
 #### 3. Clone & Configure
 ```bash
-# Clone the repository
 git clone https://github.com/your-username/antigravity-remote-terminal.git
 cd antigravity-remote-terminal
-
-# Install dependencies
 npm install
-
-# Setup environment variables
 cp .env.example .env
 ```
 
-Edit `.env` with your actual credentials:
+Configure `.env`:
 ```env
 BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz123456789
 ADMIN_CHAT_ID=123456789
 DEFAULT_CWD=C:\Users\username\Desktop\my-project
-DEFAULT_MODEL=gemini-3.7-flash
+DEFAULT_MODEL=gemini-3.8-flash
+DEFAULT_EFFORT=high
+FIVE_HOUR_LIMIT=250
 LOCAL_API_PORT=7799
 ```
 
 #### 4. Run the Bot
 ```bash
-# Development with auto-reload
 npm start
-
-# Or directly with node
-npm run dev
 ```
 
 ---
@@ -81,17 +75,20 @@ npm run dev
 
 | Command | Description |
 | :--- | :--- |
-| `/start` | Launch bot, display system status, and show the main persistent menu |
-| `/sessions` | View and manage active sessions (create new, switch, or close) |
-| `/model` | Open the interactive AI Model selection keyboard |
-| `/limit` | View estimated daily token limits, request usage, and session stats |
-| `/setcwd <path>` | View or update default project root path |
-| `/get <filepath>`| Download a file from the host machine to Telegram (up to 50MB) |
-| `/pwd` | Print current working directory of active session |
+| `/start` | Launch bot, display system status, and show persistent keyboard |
+| `/sessions` | View and manage interactive session cards |
+| `/model` | Open AI Model selection keyboard |
+| `/effort` or `/speed` | Select model reasoning speed (Low, Medium, High) |
+| `/limit` | View 5-hour rolling limit progress, next reset timer, and statistics |
+| `/newsess <name>` | Create and activate a new session |
+| `/switch <id>` | Switch to a specific session by ID |
+| `/setcwd <path>` | View or update working directory |
+| `/get <filepath>`| Download a file from host machine to Telegram |
+| `/pwd` | Print working directory of active session |
 | `/ls` | List directory contents of active session |
-| `/history` | View the last 20 commands executed in the active session |
-| `/kill` | Terminate the active child process in current session |
-| `/sys` | Display host CPU, RAM, and OS diagnostics |
+| `/history` | View the last 20 commands executed in active session |
+| `/kill` | Terminate active child process in current session |
+| `/sys` | Display host CPU, RAM, OS, and AGY binary diagnostics |
 | `/help` | Show command cheat sheet |
 
 ---
@@ -102,53 +99,62 @@ npm run dev
 ## 🇺🇿 O'zbekcha
 
 ### 🌟 Umumiy Ma'lumot
-**Antigravity Remote Terminal Bot** — bu Telegram orqali shaxsiy kompyuteringiz terminali va Google Antigravity (AGY) agentini masofadan xavfsiz boshqarish imkonini beruvchi tizimdir. Loyihalaringizni istalgan joydan turib nazorat qiling, buyruqlar bering, AI modellarini almashtiring va fayllarni qabul qiling.
+**Antigravity Remote Terminal Bot** — bu Telegram orqali shaxsiy kompyuteringiz terminali va eng yangi Google Antigravity (AGY) agentini masofadan to'liq xavfsiz boshqarish imkonini beruvchi tizimdir. Loyihalaringizni istalgan joydan turib boshqaring, model va tezlikni tanlang, 5 soatlik limitni kuzatib boring.
 
 ### ✨ Asosiy Imkoniyatlar
-- **🤖 Yangi AI Modellari:** `Gemini 3.7 Flash`, `Gemini 3.7 Pro`, `Gemini 3.6 Flash`, `Gemini 3.1 Pro`, `Claude Sonnet 4.6`, `Claude Opus 4.6`, `GPT-OSS 120B` modellarini bitta tugma orqali almashtirish.
-- **📂 Ko'p Sessiyali Boshqaruv:** Bir vaqtning o'zida bir nechta mustaqil sessiyalarni ochish, ularning papkalari va tarixlari alohida saqlanadi.
-- **📊 Limit va Statistika (`/limit`):** Kunlik so'rovlar, taxminiy token sarfi va vizual progress bar (`[██████░░░░] 60%`).
-- **📤 Fayl almashinuvi (`/get`):** Kompyuterdagi fayllarni Telegram orqali yuklab olish va AGY yaratgan fayllarni avtomatik qabul qilish.
-- **🔒 Xavfsizlik:** Faqat `.env` da ko'rsatilgan `ADMIN_CHAT_ID` egasigina botdan foydalana oladi.
-- **🛑 Jarayonlarni to'xtatish:** Jarayonni to'xtatish uchun inline tugma va `/kill` buyrug'i.
+- **🤖 Yangilangan Google Antigravity Modellari:**
+  - `Gemini 3.8 Flash` — Eng yangi, o'ta tezkor va aqlli (Asosiy / Tavsiya etiladi)
+  - `Gemini 3.7 Flash` — Tez va ko'p qirrali
+  - `Gemini 3.6 Flash` — Oldingi avlod, yengil skriptlar
+  - `Gemini 3.1 Pro` — Murakkab arxitektura va kodlash
+  - `Claude Sonnet 4.6` — Anthropic Thinking, chuqur tahlil
+  - `Claude Opus 4.6` — Eng kuchli Anthropic modeli
+  - `GPT-OSS 120B` — Ochiq manbali model
+- **⚡ Ishlash Tezligini Tanlash (Reasoning Effort):**
+  - ⚡ `Low (Tezkor)` — Minimal fikrlash, tezkor javob, kam token sarfi
+  - ⚖️ `Medium (O'rtacha)` — Standart muvozanatli tezlik
+  - 🧠 `High (Chuqur)` — Maksimal tahlil va yuqori sifatli kodlash
+- **⏱️ Aniq 5-Soatlik Limit Tizimi (`/limit`):**
+  - 5 soatlik sirg'aluvchi (rolling window) limit statusi
+  - Ishlatilgan va qolgan so'rovlar soni (`X / 250 ta`)
+  - Vizual yuklanish progress-bari (`[████░░░░░░] 35%`)
+  - Keyingi so'rov tiklanish vaqti taymeri (masalan: `42 daqiqadan so'ng 22:15 da`)
+  - Modellar va tezlik darajalari bo'yicha sarf statistikasi
+- **📂 Kuchaytirilgan Interaktiv Sessiyalar (`/sessions`):**
+  - Har bir sessiya uchun alohida karta: model, tezlik, papka, buyruqlar soni
+  - Bitta tugma bilan sessiyaga o'tish, nomini o'zgartirish, suhbatni tozalash (`reset`), papkani sozlash
+- **📤 Fayl Yuklab Olish (`/get`):** Kompyuterdagi fayllarni to'g'ridan-to'g'ri Telegramga yuklab olish.
+- **🔒 100% Xavfsiz:** Faqat `.env` dagi `ADMIN_CHAT_ID` foydalanuvchisi boshqara oladi.
 
 ---
 
 ### 🚀 O'rnatish va Ishga Tushirish
 
 #### 1. Talablar
-- [Node.js](https://nodejs.org/) (v18 yoki undan yuqori)
-- [Antigravity CLI](https://antigravity.google) (`agy`) kompyuterga o'rnatilgan bo'lishi kerak
+- Node.js (v18+)
+- Google Antigravity CLI (`agy`)
 
-#### 2. Telegram Bot Tayyorlash
-1. [@BotFather](https://t.me/BotFather) orqali yangi bot yarating va `BOT_TOKEN` oling.
-2. [@userinfobot](https://t.me/userinfobot) orqali o'zingizning Telegram ID raqamingizni (`ADMIN_CHAT_ID`) oling.
-
-#### 3. O'rnatish
+#### 2. Sozlash
 ```bash
-# Loyihani klonlash
 git clone https://github.com/your-username/antigravity-remote-terminal.git
 cd antigravity-remote-terminal
-
-# Kerakli kutubxonalarni o'rnatish
 npm install
-
-# .env faylini yaratish
 cp .env.example .env
 ```
 
-`.env` faylini o'z ma'lumotlaringiz bilan to'ldiring:
+`.env` fayli namunasi:
 ```env
-BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz123456789
-ADMIN_CHAT_ID=123456789
-DEFAULT_CWD=C:\Users\username\Desktop\loyiha
-DEFAULT_MODEL=gemini-3.7-flash
+BOT_TOKEN=8752300123:AAF1F9Q1cedDyhEj4k0lWXsKhx9wIX5Hvx4
+ADMIN_CHAT_ID=112436605
+DEFAULT_CWD=C:\Users\muzaf\Desktop\mzfck\projects
+DEFAULT_MODEL=gemini-3.8-flash
+DEFAULT_EFFORT=high
+FIVE_HOUR_LIMIT=250
 LOCAL_API_PORT=7799
 ```
 
-#### 4. Ishga Tushirish
+#### 3. Ishga Tushirish
 ```bash
-# Nodemon bilan avtomatik qayta yuklanish rejimida:
 npm start
 ```
 
@@ -158,18 +164,21 @@ npm start
 
 | Buyruq | Tavsif |
 | :--- | :--- |
-| `/start` | Botni ishga tushirish, tizim holati va asosiy menyu |
-| `/sessions` | Mavjud sessiyalar ro'yxati (yangi ochish / almashtirish / yopish) |
+| `/start` | Botni ishga tushirish, holat va doimiy qulay menyu |
+| `/sessions` | Interaktiv sessiyalar ro'yxati va boshqaruv paneli |
 | `/model` | AI modelini tanlash oynasi |
-| `/limit` | Limitlar, tokenlar sarfi va statistika |
-| `/setcwd <yo'l>` | Ishchi papka yo'lini ko'rish yoki yangilash |
-| `/get <fayl>` | Kompyuterdan faylni Telegramga yuklab olish (50MB gacha) |
+| `/effort` yoki `/speed` | Model ishlash tezligini tanlash (Low, Medium, High) |
+| `/limit` | Aniq 5-soatlik limit va tiklanish taymeri |
+| `/newsess <nom>` | Yangi sessiya ochish |
+| `/switch <id>` | Belgilangan sessiyaga o'tish |
+| `/setcwd <yo'l>` | Ishchi papkani ko'rish yoki yangilash |
+| `/get <fayl>` | Kompyuterdan faylni Telegramga yuklab olish |
 | `/pwd` | Faol sessiyaning joriy papkasi |
 | `/ls` | Faol sessiya papkasidagi fayllar |
-| `/history` | Sessiyada bajarilgan so'nggi 20 ta buyruq |
-| `/kill` | Ishlayotgan jarayonni majburiy to'xtatish |
-| `/sys` | Kompyuterning CPU, RAM va OS holati |
-| `/help` | Qo'llanma |
+| `/history` | So'nggi 20 ta buyruq |
+| `/kill` | Ishlayotgan jarayonni to'xtatish |
+| `/sys` | Server tizim parametrlari (CPU, RAM, OS, AGY) |
+| `/help` | Bot qo'llanmasi |
 
 ---
 
@@ -179,79 +188,19 @@ npm start
 ## 🇷🇺 Русский
 
 ### 🌟 Описание
-**Antigravity Remote Terminal Bot** — это надежный мост для удаленного управления локальным терминалом и AI-агентом Google Antigravity (AGY) через Telegram. Выполняйте задачи, переключайте модели рассуждений, следите за лимитами токенов и скачивайте файлы прямо из чата.
+**Antigravity Remote Terminal Bot** — мощный Telegram-мост для управления терминалом и новейшим AI-агентом Google Antigravity (AGY).
 
-### ✨ Основные Возможности
-- **🤖 Выбор AI Моделей:** Мгновенное переключение между `Gemini 3.7 Flash/Pro`, `Gemini 3.6 Flash`, `Gemini 3.1 Pro`, `Claude Sonnet/Opus 4.6`, `GPT-OSS 120B` с автоматической поддержкой параметра `--effort`.
-- **📂 Мультисессионность:** Создание нескольких изолированных терминальных сессий с собственными рабочими каталогами и историей.
-- **📊 Лимиты и Статистика (`/limit`):** Отслеживание дневных запросов (RPM, RPD, TPM) с визуальным индикатором прогресса.
-- **📤 Передача файлов (`/get` & Local API):** Отправка файлов с компьютера в Telegram и автоматическая доставка артефактов через локальный вебхук.
-- **🔒 Полная Безопасность:** Доступ строго ограничен вашим `ADMIN_CHAT_ID`. Запросы от других пользователей игнорируются.
-- **🛑 Остановка процессов:** Моментальное завершение зависших процессов кнопкой или командой `/kill`.
-
----
-
-### 🚀 Установка и Запуск
-
-#### 1. Требования
-- [Node.js](https://nodejs.org/) (v18 или новее)
-- [Antigravity CLI](https://antigravity.google) (`agy`), настроенный в системном PATH
-
-#### 2. Создание бота
-1. В [@BotFather](https://t.me/BotFather) создайте нового бота и скопируйте `BOT_TOKEN`.
-2. Узнайте свой Telegram ID в [@userinfobot](https://t.me/userinfobot) для параметра `ADMIN_CHAT_ID`.
-
-#### 3. Клонирование и настройка
-```bash
-# Клонируйте репозиторий
-git clone https://github.com/your-username/antigravity-remote-terminal.git
-cd antigravity-remote-terminal
-
-# Установите зависимости
-npm install
-
-# Создайте файл конфигурации
-cp .env.example .env
-```
-
-Заполните `.env`:
-```env
-BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz123456789
-ADMIN_CHAT_ID=123456789
-DEFAULT_CWD=C:\Users\username\Desktop\my-project
-DEFAULT_MODEL=gemini-3.7-flash
-LOCAL_API_PORT=7799
-```
-
-#### 4. Запуск
-```bash
-# Запуск с авто-перезагрузкой при изменениях
-npm start
-```
-
----
-
-### 🎮 Список Команд
-
-| Команда | Описание |
-| :--- | :--- |
-| `/start` | Запуск, диагностика хоста и главное меню |
-| `/sessions` | Список и переключение сессий |
-| `/model` | Интерактивное меню выбора AI-модели |
-| `/limit` | Статистика токенов и суточные лимиты |
-| `/setcwd <путь>` | Просмотр или изменение рабочей директории |
-| `/get <файл>` | Отправка файла с ПК в Telegram (до 50MB) |
-| `/pwd` | Текущий каталог активной сессии |
-| `/ls` | Содержимое текущей папки |
-| `/history` | История последних 20 выполненных команд |
-| `/kill` | Принудительная остановка активного процесса |
-| `/sys` | Диагностика CPU, RAM и ОС |
-| `/help` | Справка по всем командам |
+### ✨ Возможности
+- **🤖 Актуальные модели Google Antigravity:** `Gemini 3.8 Flash (High/Med/Low)`, `Gemini 3.7 Flash`, `Gemini 3.6 Flash`, `Gemini 3.1 Pro`, `Claude Sonnet 4.6`, `Claude Opus 4.6`, `GPT-OSS 120B`.
+- **⚡ Скорость рассуждений (Effort):** Выбор между `Low` (быстро/экономно), `Medium` (баланс) и `High` (глубокий анализ).
+- **⏱️ Точный 5-часовой лимит (`/limit`):** Плавающее 5-часовое окно запросов, таймер восстановления слотов и подробная статистика.
+- **📂 Интерактивные мультисессии (`/sessions`):** Детальные карточки управления каждой сессией.
+- **📤 Передача файлов (`/get`):** Выгрузка файлов прямо в Telegram.
 
 ---
 
 <div align="center">
 
-Made with ❤️ for effortless remote AI programming.
+Made with ❤️ for effortless remote AI programming with Google Antigravity.
 
 </div>
