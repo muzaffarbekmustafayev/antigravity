@@ -10,6 +10,8 @@ const { startWebhookServer } = require('./src/webhook');
 // Global xatoliklarni ushlash
 process.on('uncaughtException',  (e) => console.error('UncaughtException:',  e));
 process.on('unhandledRejection', (e) => console.error('UnhandledRejection:', e));
+process.on('SIGINT',  () => process.exit(0));
+process.on('SIGTERM', () => process.exit(0));
 
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 console.log('🚀 Antigravity Remote Terminal Bot ishga tushirilmoqda...');

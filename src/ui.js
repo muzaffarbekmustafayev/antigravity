@@ -35,9 +35,8 @@ function buildProgressBar(used, max, length = 10) {
 // ─── Asosiy Doimiy Klaviatura (Reply Keyboard) ────────────────────────────────
 const MAIN_KEYBOARD = {
   keyboard: [
-    [{ text: '📂 Sessiyalar' }, { text: '🤖 Model' }, { text: '⚡ Tezlik' }],
-    [{ text: '📊 5-Soatlik Limit' }, { text: '💾 Saqlash' }, { text: '📍 Papka (pwd)' }],
-    [{ text: '📁 Fayllar (ls)' }, { text: '📜 Tarix' }, { text: '💻 Tizim' }],
+    [{ text: '🤖 Model' }, { text: '⚡ Tezlik' }, { text: '📊 Limit' }],
+    [{ text: '📂 Sessiyalar' }, { text: '💾 Saqlash' }, { text: '📁 Fayllar' }],
     [{ text: '🛑 To\'xtatish' }, { text: '⚙️ Sozlamalar' }, { text: '❓ Yordam' }],
   ],
   resize_keyboard: true,
@@ -54,7 +53,7 @@ function buildSessionsKeyboard(chatId) {
     const mInfo   = getModelInfo(sess.model);
     const effInfo = getEffortInfo(sess.effort);
     const runTag  = sess.proc ? ' ⚙️' : '';
-    const label   = `${isAct ? '⭐ ' : ''}${sess.name} [${mInfo.emoji} ${effInfo.emoji}]${runTag}`;
+    const label   = `${isAct ? '⭐ ' : ''}${sess.name} [${mInfo.emoji} ${effInfo.label}]${runTag}`;
 
     buttons.push([
       { text: label,             callback_data: 'sess_view_' + sid },
@@ -63,8 +62,8 @@ function buildSessionsKeyboard(chatId) {
   }
 
   buttons.push([
-    { text: '➕ Yangi sessiya ochish', callback_data: 'new_session' },
-    { text: '🔄 Yangilash',            callback_data: 'refresh_sessions' }
+    { text: '➕ Yangi sessiya', callback_data: 'new_session' },
+    { text: '🔄 Yangilash',     callback_data: 'refresh_sessions' }
   ]);
 
   return { inline_keyboard: buttons };
@@ -73,7 +72,7 @@ function buildSessionsKeyboard(chatId) {
 function buildSessionsListText(chatId) {
   const activeSid = activeSession.get(chatId.toString());
   if (sessions.size === 0) {
-    return '📋 <b>Sessiyalar yo\'q</b>\n\nYangi sessiya ochish uchun <b>➕ Yangi sessiya</b> tugmasini bosing.';
+    return '📂 <b>Sessiyalar yo\'q.</b>';
   }
 
   const lines = [];
@@ -81,23 +80,16 @@ function buildSessionsListText(chatId) {
     const isAct   = sid === activeSid;
     const mInfo   = getModelInfo(sess.model);
     const effInfo = getEffortInfo(sess.effort);
-    const runTag  = sess.proc ? ' <i>(⚙️ bajarilmoqda)</i>' : '';
-    const status  = isAct ? '⭐ <b>[FAOL]</b>' : '💤 [Kutmoqda]';
+    const runTag  = sess.proc ? ' ⚙️' : '';
+    const mark    = isAct ? '⭐ ' : '';
 
     lines.push(
-      `${status} <b>${escapeHtml(sess.name)}</b> (ID: <code>${sid}</code>)${runTag}\n` +
-      `   └ 🤖 <b>${escapeHtml(mInfo.label)}</b> | ⚡ <b>${escapeHtml(effInfo.label)}</b>\n` +
-      `   └ 📁 <code>${escapeHtml(shortPath(sess.cwd))}</code> | 📊 Buyruqlar: <b>${sess.cmdCount || sess.history.length} ta</b>`
+      `${mark}<b>${escapeHtml(sess.name)}</b> [${mInfo.emoji} ${effInfo.label}]${runTag}\n` +
+      `📁 <code>${escapeHtml(shortPath(sess.cwd))}</code> · <b>${sess.cmdCount || sess.history.length} ta</b>`
     );
   }
 
-  return (
-    '📋 <b>Mavjud Antigravity Sessiyalari:</b>\n' +
-    '━'.repeat(26) + '\n\n' +
-    lines.join('\n\n') + '\n\n' +
-    '━'.repeat(26) + '\n' +
-    '<i>Sessiyani boshqarish uchun uning tugmasini bosing.</i>'
-  );
+  return `📂 <b>Sessiyalar:</b>\n\n${lines.join('\n\n')}`;
 }
 
 // ─── Aniq Sessiya Kartasi ─────────────────────────────────────────────────────
@@ -106,21 +98,15 @@ function buildSessionDetailText(sess, chatId) {
   const mInfo   = getModelInfo(sess.model);
   const effInfo = getEffortInfo(sess.effort);
   const statusStr = sess.proc
-    ? '⚙️ <b>Bajarilmoqda</b> (Jarayon faol)'
-    : isAct ? '⭐ <b>Faol sessiya</b>' : '💤 <b>Kutish rejimida</b>';
+    ? '⚙️ Bajarilmoqda'
+    : isAct ? '⭐ Faol' : '💤 Kutmoqda';
 
   return (
-    `📌 <b>Sessiya Tafsilotlari:</b> <code>${escapeHtml(sess.name)}</code>\n` +
-    '━'.repeat(26) + '\n' +
-    `🆔 <b>ID:</b> <code>${sess.id}</code>\n` +
-    `📊 <b>Holat:</b> ${statusStr}\n` +
-    `📁 <b>Ishchi jild:</b> <code>${escapeHtml(shortPath(sess.cwd))}</code>\n` +
-    `🤖 <b>Model:</b> ${mInfo.emoji} <b>${escapeHtml(mInfo.label)}</b>\n` +
-    `⚡ <b>Tezlik (Effort):</b> ${effInfo.emoji} <b>${escapeHtml(effInfo.label)}</b>\n` +
-    `📝 <b>Jami buyruqlar:</b> <b>${sess.cmdCount || sess.history.length} ta</b>\n` +
-    `⏱️ <b>Yaratilgan:</b> ${new Date(sess.createdAt).toLocaleTimeString('uz-UZ')}\n` +
-    '━'.repeat(26) + '\n' +
-    '<i>Quyidagi tugmalar orqali ushbu sessiyani to\'liq sozlang:</i>'
+    `📌 <b>${escapeHtml(sess.name)}</b> (${statusStr})\n\n` +
+    `🤖 <b>Model:</b> ${mInfo.emoji} ${escapeHtml(mInfo.label)}\n` +
+    `⚡ <b>Tezlik:</b> ${effInfo.label}\n` +
+    `📁 <b>Jild:</b> <code>${escapeHtml(shortPath(sess.cwd))}</code>\n` +
+    `📊 <b>Buyruqlar:</b> ${sess.cmdCount || sess.history.length} ta`
   );
 }
 
@@ -130,30 +116,30 @@ function buildSessionDetailKeyboard(sess, chatId) {
 
   // Tanlash
   if (!isAct) {
-    rows.push([{ text: '⭐ Shu sessiyaga o\'tish (Faollashtirish)', callback_data: 'sess_sel_' + sess.id }]);
+    rows.push([{ text: '⭐ Shu sessiyaga o\'tish', callback_data: 'sess_sel_' + sess.id }]);
   }
 
   // Model va Tezlik
   rows.push([
-    { text: '🤖 Modelni o\'zgartirish',  callback_data: 'sess_model_' + sess.id },
-    { text: '⚡ Tezlikni o\'zgartirish', callback_data: 'sess_effort_' + sess.id },
+    { text: '🤖 Model',  callback_data: 'sess_model_' + sess.id },
+    { text: '⚡ Tezlik', callback_data: 'sess_effort_' + sess.id },
   ]);
 
   // Papka va Yangilash
   rows.push([
-    { text: '📁 Papkani o\'zgartirish', callback_data: 'sess_setcwd_' + sess.id },
-    { text: '🔄 Suhbatni tozalash',     callback_data: 'sess_reset_' + sess.id },
+    { text: '📁 Jild',   callback_data: 'sess_setcwd_' + sess.id },
+    { text: '🔄 Tozalash', callback_data: 'sess_reset_' + sess.id },
   ]);
 
-  // O'zgarishlarni saqlash
+  // O'zgarishlarni saqlash va Nom
   rows.push([
-    { text: '💾 O\'zgarishlarni saqlash', callback_data: 'sess_save_' + sess.id },
-    { text: '✏️ Nomini o\'zgartirish',   callback_data: 'sess_rename_' + sess.id },
+    { text: '💾 Saqlash', callback_data: 'sess_save_' + sess.id },
+    { text: '✏️ Nom',     callback_data: 'sess_rename_' + sess.id },
   ]);
 
   // Tarix
   rows.push([
-    { text: '📜 So\'nggi buyruqlar',     callback_data: 'sess_hist_' + sess.id },
+    { text: '📜 So\'nggi buyruqlar', callback_data: 'sess_hist_' + sess.id },
   ]);
 
   // Jarayon ishlayotgan bo'lsa
@@ -193,21 +179,11 @@ function buildModelKeyboard(targetSid) {
 function buildModelText(currentModelId, currentEffortId) {
   const m   = getModelInfo(currentModelId);
   const eff = getEffortInfo(currentEffortId);
-  const lines = AVAILABLE_MODELS.map(x => {
-    const isAct = x.id === currentModelId ? ' ✅' : '';
-    const effortTag = x.supportsEffort ? ' [⚡ Tezlik tanlash mumkin]' : '';
-    return `• <b>${x.emoji} ${escapeHtml(x.label)}</b>${isAct} — <i>${escapeHtml(x.desc)}</i>${effortTag}`;
-  });
 
   return (
-    '🤖 <b>Google Antigravity Modellari:</b>\n' +
-    '━'.repeat(26) + '\n' +
-    `🎯 <b>Hozirgi faol model:</b> ${m.emoji} <b>${escapeHtml(m.label)}</b>\n` +
-    `⚡ <b>Hozirgi tezlik:</b> ${eff.emoji} <b>${escapeHtml(eff.label)}</b>\n\n` +
-    '<b>Mavjud modellar ro\'yxati:</b>\n' +
-    lines.join('\n') + '\n\n' +
-    '━'.repeat(26) + '\n' +
-    '<i>O\'zgartirish uchun kerakli model tugmasini bosing:</i>'
+    `🤖 <b>Model:</b> ${m.emoji} ${escapeHtml(m.label)}\n` +
+    `⚡ <b>Tezlik:</b> ${eff.label}\n\n` +
+    `Kerakli modelni tanlang:`
   );
 }
 
@@ -230,20 +206,10 @@ function buildEffortText(currentEffortId, currentModelId) {
   const eff = getEffortInfo(currentEffortId);
   const m   = getModelInfo(currentModelId);
 
-  const lines = EFFORT_LEVELS.map(e => {
-    const isAct = e.id === currentEffortId ? ' ✅' : '';
-    return `• ${e.emoji} <b>${escapeHtml(e.label)}</b>${isAct}\n   └ <i>${escapeHtml(e.desc)}</i>`;
-  });
-
   return (
-    '⚡ <b>Model Ishlash Tezligi (Reasoning Effort):</b>\n' +
-    '━'.repeat(26) + '\n' +
-    `🤖 <b>Model:</b> ${m.emoji} <b>${escapeHtml(m.label)}</b>\n` +
-    `🎯 <b>Hozirgi tezlik:</b> ${eff.emoji} <b>${escapeHtml(eff.label)}</b>\n\n` +
-    '<b>Tezlik darajalari:</b>\n\n' +
-    lines.join('\n\n') + '\n\n' +
-    '━'.repeat(26) + '\n' +
-    '<i>Tezlikni o\'zgartirish uchun quyidagi tugmalardan birini bosing:</i>'
+    `⚡ <b>Tezlik:</b> ${eff.emoji} ${escapeHtml(eff.label)}\n` +
+    `🤖 <b>Model:</b> ${escapeHtml(m.label)}\n\n` +
+    `Kerakli tezlikni tanlang:`
   );
 }
 
@@ -254,42 +220,18 @@ function buildLimitText(chatId) {
   const mid   = sess ? sess.model : config.getGlobalModel();
   const mInfo = getModelInfo(mid);
   const stats = get5HourStats(mid);
+  const bar   = buildProgressBar(stats.total5h, stats.maxLimit, 8);
 
-  const bar = buildProgressBar(stats.total5h, stats.maxLimit, 12);
-
-  let statusEmoji = '🟢 Yaxshi (Mo\'l limit)';
-  if (stats.usedPct >= 90) statusEmoji = '🔴 Diqqat (Limit deyarli to\'lgan!)';
-  else if (stats.usedPct >= 70) statusEmoji = '🟡 O\'rtacha (Limit sarflanmoqda)';
-
-  let recoveryText = 'Limit to\'liq va foydalanishga tayyor.';
+  let recovery = '';
   if (stats.nextRecovery) {
-    const timeStr = new Date(stats.nextRecovery).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
-    recoveryText = `Eng birinchi so'rov <b>${stats.nextRecoveryMins} daqiqadan so'ng</b> (soat <code>${timeStr}</code> da) oynadan chiqib, limit bo'shaydi.`;
+    recovery = `\n⏱ Tiklanish: <b>${stats.nextRecoveryMins} daqiqada</b>`;
   }
 
-  const modelBreakdown = Object.entries(stats.byModel).map(([modId, cnt]) => {
-    const inf = getModelInfo(modId);
-    return `   • ${inf.emoji} ${escapeHtml(inf.label)}: <b>${cnt} ta</b>`;
-  }).join('\n') || '   • <i>Hali so\'rov yuborilmadi</i>';
-
   return (
-    '📊 <b>Antigravity 5-Soatlik Limit &amp; Statistika:</b>\n' +
-    '━'.repeat(26) + '\n' +
-    `🤖 <b>Aktiv Model:</b> ${mInfo.emoji} <b>${escapeHtml(mInfo.label)}</b>\n` +
-    `⚡ <b>Tezlik (Effort):</b> ${getEffortInfo(sess ? sess.effort : config.getGlobalEffort()).emoji} <b>${escapeHtml(getEffortInfo(sess ? sess.effort : config.getGlobalEffort()).label)}</b>\n\n` +
-    `⏳ <b>5-SOATLIK OYNA STATUSI:</b>\n` +
-    `📈 Holat: <b>${statusEmoji}</b>\n` +
-    `🔢 Ishlatilgan so'rovlar: <b>${stats.total5h} / ${stats.maxLimit} ta</b>\n` +
-    `🔋 Qolgan so'rovlar: <b>${stats.remaining} ta</b>\n` +
-    `📊 Oyna yuklanishi: <code>[${bar}]</code>\n\n` +
-    `⏱️ <b>Limit tiklanishi:</b>\n` +
-    `└ ${recoveryText}\n\n` +
-    `🤖 <b>Modellar bo'yicha (so'nggi 5 soat):</b>\n` +
-    modelBreakdown + '\n\n' +
-    `⚡ <b>Tezlik bo'yicha:</b> High: <b>${stats.byEffort.high}</b> | Medium: <b>${stats.byEffort.medium}</b> | Low: <b>${stats.byEffort.low}</b>\n` +
-    `📅 <b>Bugungi jami (24 soat):</b> <b>${stats.todayTotal} ta so'rov</b>\n` +
-    '━'.repeat(26) + '\n' +
-    '💡 <i>Limit har bir 5 soatlik sirg\'aluvchi (rolling window) oraliqda avtomatik tiklanadi.</i>'
+    `📊 <b>5-Soatlik Limit:</b> <b>${stats.total5h} / ${stats.maxLimit}</b>\n` +
+    `<code>[${bar}]</code> · Qoldi: <b>${stats.remaining}</b>\n\n` +
+    `🤖 <b>Model:</b> ${mInfo.emoji} ${escapeHtml(mInfo.label)}${recovery}\n` +
+    `📅 <b>Bugun:</b> ${stats.todayTotal} ta so'rov`
   );
 }
 
@@ -302,16 +244,11 @@ function buildSysInfoText() {
   const memPct     = Math.round((usedMemMB / totalMemMB) * 100);
 
   return (
-    '💻 <b>Tizim va Server Diagnostikasi:</b>\n' +
-    '━'.repeat(26) + '\n' +
-    `🖥️ <b>OS:</b> <code>${escapeHtml(os.type())} ${escapeHtml(os.release())} (${os.arch()})</code>\n` +
-    `🧠 <b>CPU:</b> <code>${escapeHtml(cpus[0].model)}</code> (${cpus.length} yadro)\n` +
-    `📊 <b>RAM:</b> <code>${usedMemMB} MB / ${totalMemMB} MB (${memPct}%)</code>\n` +
-    `👤 <b>Foydalanuvchi:</b> <code>${escapeHtml(os.userInfo().username)}</code>\n` +
-    `📁 <b>Home:</b> <code>${escapeHtml(os.homedir())}</code>\n` +
-    `⏱️ <b>Server Uptime:</b> <b>${Math.round(process.uptime() / 60)} daqiqa</b>\n` +
-    `🤖 <b>AGY CLI:</b> <code>${escapeHtml(config.AGY_BIN)}</code>\n` +
-    '━'.repeat(26)
+    `💻 <b>Tizim:</b>\n` +
+    `🖥️ ${escapeHtml(os.type())} (${escapeHtml(os.arch())})\n` +
+    `🧠 CPU: ${cpus.length}x ${escapeHtml(cpus[0].model.trim())}\n` +
+    `📊 RAM: ${usedMemMB}/${totalMemMB} MB (${memPct}%)\n` +
+    `⏱️ Uptime: ${Math.round(process.uptime() / 60)} min`
   );
 }
 

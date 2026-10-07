@@ -34,7 +34,6 @@ function initBot() {
   const keepAliveAgent = new https.Agent({
     keepAlive: true,
     keepAliveMsecs: 10000,
-    timeout: 45000,
   });
 
   const bot = new TelegramBot(config.TOKEN, {
@@ -46,38 +45,11 @@ function initBot() {
       }
     },
     request: {
-      agent: keepAliveAgent,
-      timeout: 35000
+      agent: keepAliveAgent
     }
   });
 
-  let lastPollActivity = Date.now();
-  let isRestarting = false;
-
-  const restartPollingSafe = async (reason) => {
-    if (isRestarting) return;
-    isRestarting = true;
-    console.warn(`🔄 Polling qayta ishga tushirilmoqda (sabab: ${reason})...`);
-    try {
-      try {
-        await bot.stopPolling({ cancel: true, reason: 'Auto reconnect' });
-      } catch (_) {}
-      await bot.startPolling({ restart: true });
-      lastPollActivity = Date.now();
-      console.log('✅ Telegram bot muvaffaqiyatli qayta ulandi.');
-    } catch (e) {
-      console.warn('Pollingni qayta ulash urinishi:', e.message);
-    } finally {
-      isRestarting = false;
-    }
-  };
-
-  // Har qanday xabar kelganda faollik vaqtini yangilash
-  bot.on('message', () => { lastPollActivity = Date.now(); });
-  bot.on('callback_query', () => { lastPollActivity = Date.now(); });
-
-  bot.on('polling_error', async (err) => {
-    lastPollActivity = Date.now();
+  bot.on('polling_error', (err) => {
     const errMsg = err ? (err.message || String(err)) : '';
 
     if (errMsg.includes('409 Conflict')) {
@@ -95,31 +67,23 @@ function initBot() {
       errMsg.includes('socket hang up') ||
       errMsg.includes('network')
     ) {
-      console.warn(`⚠️ Tarmoq vaqtincha uzildi (${errMsg}). 3 soniyadan so'ng qayta ulanadi...`);
-      setTimeout(() => restartPollingSafe(errMsg), 3000);
+      console.warn(`⚠️ Tarmoq uzilishi (${errMsg}), avtomatik davom etadi...`);
       return;
     }
 
     console.error('Telegram polling xatosi:', errMsg);
   });
 
-  // Watchdog taymeri: Kompyuter lock bo'lganda, tarmoq muzlaganda yoki polling to'xtab qolganda tekshirib turadi
+  // Watchdog taymeri: Faqat polling haqiqatan to'xtab qolgan bo'lsa qayta tiklaydi
   setInterval(async () => {
-    if (!bot.isPolling() && !isRestarting) {
+    if (!bot.isPolling()) {
       console.log('🔄 Watchdog: Polling to\'xtab qolgan, qayta ishga tushirilmoqda...');
-      await restartPollingSafe('Watchdog isPolling false');
-      return;
-    }
-
-    // Telegramdan 45 soniya ichida hech qanday javob kelmasa (socket muzlagan bo'lsa), qayta ulaymiz
-    const lastActive = Math.max(
-      lastPollActivity,
-      bot._polling ? (bot._polling._lastUpdate || 0) : 0
-    );
-    const inactiveSeconds = Math.round((Date.now() - lastActive) / 1000);
-    if (inactiveSeconds > 45 && !isRestarting) {
-      console.log(`🔄 Watchdog: Aloqa muzlagan (${inactiveSeconds}s javob yo'q), aloqa yangilanmoqda...`);
-      await restartPollingSafe('Watchdog socket frozen');
+      try {
+        await bot.startPolling();
+        console.log('✅ Watchdog: Polling tiklandi.');
+      } catch (e) {
+        console.warn('Watchdog polling xatosi:', e.message);
+      }
     }
   }, 10000);
 
@@ -146,16 +110,11 @@ function initBot() {
     const effInfo = getEffortInfo(sess ? sess.effort : config.getGlobalEffort());
 
     const welcome = (
-      '🚀 <b>Antigravity Remote Terminal Bot ishga tushdi!</b>\n' +
-      '━'.repeat(26) + '\n' +
-      `⭐ <b>Faol Sessiya:</b> <code>${ui.escapeHtml(sess ? sess.name : 'Asosiy')}</code>\n` +
-      `📁 <b>Ishchi jild:</b> <code>${ui.escapeHtml(ui.shortPath(config.getDefaultCwd() || '(belgilanmagan)'))}</code>\n` +
-      `🤖 <b>Model:</b> ${mInfo.emoji} <b>${ui.escapeHtml(mInfo.label)}</b>\n` +
-      `⚡ <b>Tezlik (Effort):</b> ${effInfo.emoji} <b>${ui.escapeHtml(effInfo.label)}</b>\n` +
-      `⏱️ <b>5-Soatlik Limit:</b> <b>${config.getGlobalLimit()} ta so'rov</b>\n` +
-      '━'.repeat(26) + '\n\n' +
-      '💡 <i>Xabar yozing — bot uni Google Antigravity (AGY) agenti orqali tezda bajaradi!</i>\n' +
-      '<i>Quyidagi klaviaturadan foydalanib sessiya, model va saqlashni boshqaring.</i>'
+      `🚀 <b>Antigravity Bot tayyor.</b>\n\n` +
+      `🤖 <b>Model:</b> ${mInfo.emoji} ${ui.escapeHtml(mInfo.label)} (${effInfo.label})\n` +
+      `📁 <code>${ui.escapeHtml(ui.shortPath(config.getDefaultCwd() || 'projects'))}</code>\n` +
+      `📊 <b>Limit:</b> ${config.getGlobalLimit()} ta / 5 soat\n\n` +
+      `<i>Xabar yozsangiz, AGY agenti bajaradi.</i>`
     );
 
     sendHtml(chatId, welcome, { reply_markup: ui.MAIN_KEYBOARD });
@@ -197,16 +156,16 @@ function initBot() {
   });
 
   // ─── 5-Soatlik Limit ────────────────────────────────────────────────────────
-  bot.onText(/\/limit|^📊 5-Soatlik Limit$/, (msg) => {
+  bot.onText(/\/limit|^📊 Limit$|^📊 5-Soatlik Limit$/, (msg) => {
     if (!config.isAdmin(msg.chat.id)) return;
     const chatId = msg.chat.id.toString();
     sendHtml(chatId, ui.buildLimitText(chatId), {
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '🔄 Yangilash',     callback_data: 'refresh_limit' },
-            { text: '🤖 Model tanlash', callback_data: 'open_models' },
-            { text: '⚡ Tezlik',        callback_data: 'open_efforts' }
+            { text: '🔄 Yangilash', callback_data: 'refresh_limit' },
+            { text: '🤖 Model',     callback_data: 'open_models' },
+            { text: '⚡ Tezlik',    callback_data: 'open_efforts' }
           ]
         ]
       }
@@ -222,15 +181,15 @@ function initBot() {
   });
 
   // ─── Papka (pwd) ────────────────────────────────────────────────────────────
-  bot.onText(/\/pwd|^📍 Papka \(pwd\)$/, (msg) => {
+  bot.onText(/\/pwd|^📍 Papka \(pwd\)$|^📍 Papka$/, (msg) => {
     if (!config.isAdmin(msg.chat.id)) return;
     const chatId = msg.chat.id.toString();
     const sess   = getActiveSession(chatId);
-    sendHtml(chatId, `📍 <b>${ui.escapeHtml(sess.name)}</b> ishchi jildi:\n<code>${ui.escapeHtml(sess.cwd)}</code>`);
+    sendHtml(chatId, `📍 <code>${ui.escapeHtml(sess.cwd)}</code>`);
   });
 
   // ─── Fayllar (ls) ───────────────────────────────────────────────────────────
-  bot.onText(/\/ls|^📁 Fayllar \(ls\)$/, (msg) => {
+  bot.onText(/\/ls|^📁 Fayllar$|^📁 Fayllar \(ls\)$/, (msg) => {
     if (!config.isAdmin(msg.chat.id)) return;
     const chatId = msg.chat.id.toString();
     const sess   = getActiveSession(chatId);
@@ -239,9 +198,9 @@ function initBot() {
       const dirs  = items.filter(i => i.isDirectory()).map(i => `📁 ${ui.escapeHtml(i.name)}/`);
       const files = items.filter(i => !i.isDirectory()).map(i => `📄 ${ui.escapeHtml(i.name)}`);
       const all   = [...dirs, ...files].join('\n');
-      sendHtml(chatId, `📁 <b>${ui.escapeHtml(ui.shortPath(sess.cwd))}</b> mazmuni:\n\n<pre>${all || '(bo\'sh jild)'}</pre>`);
+      sendHtml(chatId, `📁 <code>${ui.escapeHtml(ui.shortPath(sess.cwd))}</code>:\n\n<pre>${all || '(bo\'sh)'}</pre>`);
     } catch (e) {
-      sendHtml(chatId, `❌ Xatolik: <code>${ui.escapeHtml(e.message)}</code>`);
+      sendHtml(chatId, `❌ <code>${ui.escapeHtml(e.message)}</code>`);
     }
   });
 
@@ -250,10 +209,10 @@ function initBot() {
     if (!config.isAdmin(msg.chat.id)) return;
     const chatId = msg.chat.id.toString();
     const sess   = getActiveSession(chatId);
-    if (!sess.history.length) return sendHtml(chatId, `📜 <b>${ui.escapeHtml(sess.name)}</b>: buyruqlar tarixi bo'sh.`);
+    if (!sess.history.length) return sendHtml(chatId, `📜 Tarix bo'sh.`);
 
-    const list = sess.history.slice(-20).map((c, i) => `${i + 1}. <code>${ui.escapeHtml(c)}</code>`).join('\n');
-    sendHtml(chatId, `📜 <b>${ui.escapeHtml(sess.name)} — So'nggi buyruqlar:</b>\n\n${list}`);
+    const list = sess.history.slice(-15).map((c, i) => `${i + 1}. <code>${ui.escapeHtml(c)}</code>`).join('\n');
+    sendHtml(chatId, `📜 <b>Tarix:</b>\n\n${list}`);
   });
 
   // ─── To'xtatish ─────────────────────────────────────────────────────────────
@@ -261,14 +220,14 @@ function initBot() {
     if (!config.isAdmin(msg.chat.id)) return;
     const chatId = msg.chat.id.toString();
     const sess   = getActiveSession(chatId);
-    if (!sess.proc) return sendHtml(chatId, `ℹ️ <b>${ui.escapeHtml(sess.name)}</b>: hozir ishlayotgan jarayon yo'q.`);
+    if (!sess.proc) return sendHtml(chatId, `ℹ️ Ishlayotgan jarayon yo'q.`);
 
     try {
       process.kill(-sess.proc.pid);
       sess.proc = null;
-      sendHtml(chatId, `🛑 <b>${ui.escapeHtml(sess.name)}</b>: jarayon to'xtatildi.`);
+      sendHtml(chatId, `🛑 Jarayon to'xtatildi.`);
     } catch (e) {
-      sendHtml(chatId, `❌ Jarayonni to'xtatib bo'lmadi: <code>${ui.escapeHtml(e.message)}</code>`);
+      sendHtml(chatId, `❌ Xatolik: <code>${ui.escapeHtml(e.message)}</code>`);
     }
   });
 
@@ -285,30 +244,22 @@ function initBot() {
     const sess   = getActiveSession(chatId);
 
     const text = (
-      '⚙️ <b>Bot Sozlamalari:</b>\n' +
-      '━'.repeat(26) + '\n' +
-      `📁 <b>Default Ishchi Jild:</b> <code>${ui.escapeHtml(ui.shortPath(config.getDefaultCwd() || '(belgilanmagan)'))}</code>\n` +
-      `🤖 <b>Default Model:</b> <code>${ui.escapeHtml(config.getGlobalModel())}</code>\n` +
-      `⚡ <b>Default Tezlik:</b> <code>${ui.escapeHtml(config.getGlobalEffort())}</code>\n` +
-      `⏱️ <b>5-Soatlik Limit:</b> <b>${config.getGlobalLimit()} ta so'rov</b>\n` +
-      `🔌 <b>Local Webhook API:</b> <code>http://127.0.0.1:${config.LOCAL_API_PORT}</code>\n` +
-      `🤖 <b>AGY CLI yo'li:</b> <code>${ui.escapeHtml(config.AGY_BIN)}</code>\n` +
-      '━'.repeat(26)
+      `⚙️ <b>Sozlamalar:</b>\n\n` +
+      `📁 <code>${ui.escapeHtml(ui.shortPath(config.getDefaultCwd() || 'projects'))}</code>\n` +
+      `🤖 ${ui.escapeHtml(config.getGlobalModel())} (${ui.escapeHtml(config.getGlobalEffort())})\n` +
+      `⏱️ Limit: ${config.getGlobalLimit()} ta / 5h`
     );
 
     sendHtml(chatId, text, {
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '💾 Saqlash (Git / Holat)', callback_data: 'sess_save_' + (sess ? sess.id : 's1') },
-            { text: '📁 Jildni o\'zgartirish',   callback_data: 'cfg_setcwd' }
+            { text: '🤖 Model',  callback_data: 'open_models' },
+            { text: '⚡ Tezlik', callback_data: 'open_efforts' }
           ],
           [
-            { text: '🤖 Model tanlash',         callback_data: 'open_models' },
-            { text: '⚡ Tezlik tanlash',        callback_data: 'open_efforts' }
-          ],
-          [
-            { text: '⏱️ Limitni o\'zgartirish',  callback_data: 'cfg_setlimit' }
+            { text: '📁 Jild',   callback_data: 'cfg_setcwd' },
+            { text: '⏱️ Limit',  callback_data: 'cfg_setlimit' }
           ]
         ]
       }
@@ -322,12 +273,7 @@ function initBot() {
     const arg    = (match && match[1] ? match[1] : '').trim();
 
     if (!arg) {
-      const base = config.getDefaultCwd() ? ui.shortPath(config.getDefaultCwd()) : '~';
-      return sendHtml(chatId,
-        '📥 <b>Fayl yuklab olish:</b>\n\n' +
-        '<code>/get &lt;fayl_yo\'li&gt;</code> ko\'rinishida yuboring.\n' +
-        `<i>Nisbiy yo'l uchun asos:</i> <code>${ui.escapeHtml(base)}</code>`
-      );
+      return sendHtml(chatId, '📥 <code>/get &lt;fayl_yo\'li&gt;</code>');
     }
 
     const sess     = getActiveSession(chatId);
@@ -341,15 +287,15 @@ function initBot() {
 
     const size = fs.statSync(filePath).size;
     if (size > 50 * 1024 * 1024)
-      return sendHtml(chatId, `❌ Fayl juda katta (${Math.round(size / 1024 / 1024)} MB). Telegram 50MB gacha ruxsat beradi.`);
+      return sendHtml(chatId, `❌ Fayl 50MB dan katta (${Math.round(size / 1024 / 1024)} MB).`);
 
     try {
       await bot.sendDocument(chatId, filePath, {
-        caption: `📄 <b>${ui.escapeHtml(path.basename(filePath))}</b>\n📁 <code>${ui.escapeHtml(ui.shortPath(filePath))}</code>`,
+        caption: `📄 <code>${ui.escapeHtml(path.basename(filePath))}</code>`,
         parse_mode: 'HTML'
       });
     } catch (e) {
-      sendHtml(chatId, `❌ Yuborishda xato: <code>${ui.escapeHtml(e.message)}</code>`);
+      sendHtml(chatId, `❌ <code>${ui.escapeHtml(e.message)}</code>`);
     }
   });
 
@@ -357,24 +303,16 @@ function initBot() {
   bot.onText(/\/help|^❓ Yordam$/, (msg) => {
     if (!config.isAdmin(msg.chat.id)) return;
     const help = (
-      '🚀 <b>Antigravity Remote Bot Qo\'llanmasi:</b>\n\n' +
-      '<b>Asosiy buyruqlar:</b>\n' +
-      '• <code>/start</code> — Botni boshlash va holat\n' +
-      '• <code>/sessions</code> — Barcha sessiyalar va boshqaruv\n' +
-      '• <code>/model</code> — AI modelni tanlash\n' +
-      '• <code>/effort</code> — Model tezligi (Low, Medium, High)\n' +
-      '• <code>/limit</code> — 5-soatlik limit va statistika\n' +
-      '• <code>/save</code> — Barcha o\'zgarishlarni saqlash (Git commit)\n' +
-      '• <code>/newsess &lt;nom&gt;</code> — Yangi sessiya ochish\n' +
-      '• <code>/switch &lt;id&gt;</code> — Sessiyaga o\'tish\n' +
-      '• <code>/setcwd &lt;yo\'l&gt;</code> — Ishchi jildni o\'zgartirish\n' +
-      '• <code>/get &lt;fayl&gt;</code> — Faylni Telegramga yuklab olish\n' +
-      '• <code>/pwd</code> — Aktiv sessiya jildini ko\'rish\n' +
-      '• <code>/ls</code> — Jild mazmunini ko\'rish\n' +
-      '• <code>/history</code> — So\'nggi 20 ta buyruq\n' +
-      '• <code>/kill</code> — Jarayonni majburiy to\'xtatish\n' +
-      '• <code>/sys</code> — Server tizim parametrlari\n\n' +
-      '💡 <i>Xabar yozsangiz, bot uni avtomatik tarzda Google Antigravity agentiga yuboradi va natijani terminal kod bloki ko\'rinishida qaytaradi.</i>'
+      '❓ <b>Buyruqlar:</b>\n\n' +
+      '• <code>/model</code> — AI model tanlash\n' +
+      '• <code>/effort</code> — Fikrlash tezligi\n' +
+      '• <code>/limit</code> — 5-soatlik limit\n' +
+      '• <code>/save</code> — Git ga saqlash\n' +
+      '• <code>/sessions</code> — Sessiyalar\n' +
+      '• <code>/ls</code> — Fayllar ro\'yxati\n' +
+      '• <code>/get &lt;fayl&gt;</code> — Fayl yuklab olish\n' +
+      '• <code>/kill</code> — Jarayonni to\'xtatish\n\n' +
+      '<i>Oddiy xabar yozsangiz, bot uni avtomatik tarzda bajaradi.</i>'
     );
     sendHtml(msg.chat.id, help);
   });
@@ -589,29 +527,18 @@ function initBot() {
         if (stdout)           output += stdout;
         if (stderr)           output += (stdout ? '\nSTDERR:\n' : '') + stderr;
         if (!output && error) output  = 'Exit code: ' + (error.code || '?');
-        if (!output)          output  = 'Bajarildi (chiqish natijasi yo\'q).';
+        if (!output) output = 'Bajarildi.';
 
-        output = ui.truncate(output);
+        output = ui.truncate(output.trim());
 
         bot.deleteMessage(chatId, sentMsg.message_id).catch(() => {});
 
-        const resultHeader = (
-          `✅ <b>${ui.escapeHtml(sess.name)}</b> — Bajarildi (${durationSec}s)\n` +
-          `🤖 <b>${ui.escapeHtml(modelBadge)}</b> | 📊 5-soatlik: <b>${curStats.total5h}/${curStats.maxLimit}</b>\n\n` +
-          `<pre>${ui.escapeHtml(output)}</pre>`
-        );
+        // Minimalist ko'rinish: ortiqcha sarlavhalarsiz, faqat toza javob va kichik footer
+        const footer = `\n\n<i>⚡ ${durationSec}s · ${curStats.total5h}/${curStats.maxLimit}</i>`;
+        const resultMsg = `${ui.escapeHtml(output)}${footer}`;
 
-        sendHtml(chatId, resultHeader, {
-          reply_to_message_id: msg.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: '💾 Saqlash', callback_data: 'sess_save_' + sess.id },
-                { text: '📁 ls',      callback_data: 'sess_run_ls_' + sess.id },
-                { text: '📊 Limit',   callback_data: 'refresh_limit' },
-              ]
-            ]
-          }
+        sendHtml(chatId, resultMsg, {
+          reply_to_message_id: msg.message_id
         });
       });
 
