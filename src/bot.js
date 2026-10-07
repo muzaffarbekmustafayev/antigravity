@@ -2,6 +2,8 @@ const TelegramBot = require('node-telegram-bot-api');
 const { exec }    = require('child_process');
 const fs          = require('fs');
 const path        = require('path');
+const https       = require('https');
+const os          = require('os');
 const config      = require('./config');
 const { getModelInfo, getEffortInfo } = require('./models');
 const { recordRequest, get5HourStats } = require('./limits');
@@ -21,15 +23,105 @@ const { saveChanges } = require('./git-saver');
 const ui = require('./ui');
 
 function initBot() {
-  const bot = new TelegramBot(config.TOKEN, { polling: true });
+  // Windows lock holatida (Win + L) jarayon muzlab qolmasligi uchun ustuvorlikni oshiramiz
+  try {
+    if (os.constants && os.constants.priority && os.constants.priority.PRIORITY_ABOVE_NORMAL) {
+      os.setPriority(os.constants.priority.PRIORITY_ABOVE_NORMAL);
+    }
+  } catch (_) {}
 
-  bot.on('polling_error', (err) => {
-    if (err && err.message && err.message.includes('409 Conflict')) {
-      console.warn('⚠️ Diqqat: Boshqa bot instansiyasi ishga tushgan (409 Conflict). Faqat bitta bot instansiyasi ishlashi kerak.');
-    } else {
-      console.error('Telegram polling xatosi:', err.message);
+  // HTTPS Keep-Alive agent: Lock holatida socketlar uzilib ketishining oldini oladi
+  const keepAliveAgent = new https.Agent({
+    keepAlive: true,
+    keepAliveMsecs: 10000,
+    timeout: 45000,
+  });
+
+  const bot = new TelegramBot(config.TOKEN, {
+    polling: {
+      interval: 300,
+      autoStart: true,
+      params: {
+        timeout: 20
+      }
+    },
+    request: {
+      agent: keepAliveAgent,
+      timeout: 35000
     }
   });
+
+  let lastPollActivity = Date.now();
+  let isRestarting = false;
+
+  const restartPollingSafe = async (reason) => {
+    if (isRestarting) return;
+    isRestarting = true;
+    console.warn(`🔄 Polling qayta ishga tushirilmoqda (sabab: ${reason})...`);
+    try {
+      try {
+        await bot.stopPolling({ cancel: true, reason: 'Auto reconnect' });
+      } catch (_) {}
+      await bot.startPolling({ restart: true });
+      lastPollActivity = Date.now();
+      console.log('✅ Telegram bot muvaffaqiyatli qayta ulandi.');
+    } catch (e) {
+      console.warn('Pollingni qayta ulash urinishi:', e.message);
+    } finally {
+      isRestarting = false;
+    }
+  };
+
+  // Har qanday xabar kelganda faollik vaqtini yangilash
+  bot.on('message', () => { lastPollActivity = Date.now(); });
+  bot.on('callback_query', () => { lastPollActivity = Date.now(); });
+
+  bot.on('polling_error', async (err) => {
+    lastPollActivity = Date.now();
+    const errMsg = err ? (err.message || String(err)) : '';
+
+    if (errMsg.includes('409 Conflict')) {
+      console.warn('⚠️ Diqqat: Boshqa bot instansiyasi ishga tushgan (409 Conflict). Faqat bitta bot instansiyasi ishlashi kerak.');
+      return;
+    }
+
+    if (
+      errMsg.includes('ECONNRESET') ||
+      errMsg.includes('EFATAL') ||
+      errMsg.includes('ETIMEDOUT') ||
+      errMsg.includes('ESOCKETTIMEDOUT') ||
+      errMsg.includes('ENOTFOUND') ||
+      errMsg.includes('EAI_AGAIN') ||
+      errMsg.includes('socket hang up') ||
+      errMsg.includes('network')
+    ) {
+      console.warn(`⚠️ Tarmoq vaqtincha uzildi (${errMsg}). 3 soniyadan so'ng qayta ulanadi...`);
+      setTimeout(() => restartPollingSafe(errMsg), 3000);
+      return;
+    }
+
+    console.error('Telegram polling xatosi:', errMsg);
+  });
+
+  // Watchdog taymeri: Kompyuter lock bo'lganda, tarmoq muzlaganda yoki polling to'xtab qolganda tekshirib turadi
+  setInterval(async () => {
+    if (!bot.isPolling() && !isRestarting) {
+      console.log('🔄 Watchdog: Polling to\'xtab qolgan, qayta ishga tushirilmoqda...');
+      await restartPollingSafe('Watchdog isPolling false');
+      return;
+    }
+
+    // Telegramdan 45 soniya ichida hech qanday javob kelmasa (socket muzlagan bo'lsa), qayta ulaymiz
+    const lastActive = Math.max(
+      lastPollActivity,
+      bot._polling ? (bot._polling._lastUpdate || 0) : 0
+    );
+    const inactiveSeconds = Math.round((Date.now() - lastActive) / 1000);
+    if (inactiveSeconds > 45 && !isRestarting) {
+      console.log(`🔄 Watchdog: Aloqa muzlagan (${inactiveSeconds}s javob yo'q), aloqa yangilanmoqda...`);
+      await restartPollingSafe('Watchdog socket frozen');
+    }
+  }, 10000);
 
   const sendHtml = (chatId, text, options) =>
     bot.sendMessage(chatId, text, Object.assign({ parse_mode: 'HTML' }, options || {}))
