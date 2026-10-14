@@ -259,27 +259,38 @@ function patchIdeMainJs(jsPath) {
   let modified = content;
   let changes = 0;
 
-  // Pattern 1: isAllowedCountry() → true (from patcher.js)
-  const p1 = /isAllowedCountry\(\)/g;
+  // Pattern 1: isAllowedCountry() → true (from patcher.js and extensions)
+  const p1 = /isAllowedCountry\s*\([^)]*\)/g;
   if (p1.test(modified)) {
     modified = modified.replace(p1, 'true');
     changes++;
   }
 
   // Pattern 2: isRegionBlocked() → false
-  const p2 = /isRegionBlocked\(\)/g;
+  const p2 = /isRegionBlocked\s*\([^)]*\)/g;
   if (p2.test(modified)) {
     modified = modified.replace(p2, 'false');
     changes++;
   }
 
+  // Pattern 2b: isCountryBlocked() -> false
+  const p2b = /isCountryBlocked\s*\([^)]*\)/g;
+  if (p2b.test(modified)) {
+    modified = modified.replace(p2b, 'false');
+    changes++;
+  }
+
+  // Pattern 2c: isEligibleCountry() -> true
+  const p2c = /isEligibleCountry\s*\([^)]*\)/g;
+  if (p2c.test(modified)) {
+    modified = modified.replace(p2c, 'true');
+    changes++;
+  }
+
   // Pattern 3: Region ineligibility check — "ineligible" in tier responses
-  // Replace the tier check function body to always return eligible
   const ineligiblePatterns = [
-    // Pattern from confeden: tier ineligibility reset
     { find: /\bineligible_tiers\b/g, replace: 'inexigible_tiers' },
     { find: /\bineligibleTiers\b/g,  replace: 'inexigibleTiers' },
-    // SET_INELIGIBLE message type
     { find: /"SET_INELIGIBLE"/g, replace: '"SET_INEXIGIBLE"' },
     { find: /'SET_INELIGIBLE'/g, replace: "'SET_INEXIGIBLE'" },
   ];
@@ -366,12 +377,23 @@ function findBinaryTargets(installRoot) {
 function findIdeJsTargets(installRoot) {
   const candidates = [];
 
-  // Antigravity IDE main.js
+  // If installRoot itself is directly a JS file
+  try {
+    if (fs.statSync(installRoot).isFile() && installRoot.endsWith('.js')) {
+      return [installRoot];
+    }
+  } catch (_) {}
+
+  // Antigravity IDE main.js locations
   candidates.push(path.join(installRoot, 'resources', 'app', 'out', 'main.js'));
+  candidates.push(path.join(installRoot, 'app', 'out', 'main.js'));
+  candidates.push(path.join(installRoot, 'out', 'main.js'));
+  candidates.push(path.join(installRoot, 'main.js'));
 
   // VS Code extension
   const vscodeExtDir = path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'dist');
   candidates.push(path.join(vscodeExtDir, 'extension.js'));
+  candidates.push(path.join(installRoot, 'dist', 'extension.js'));
 
   return candidates.filter(p => {
     try { return fs.statSync(p).isFile(); } catch (_) { return false; }
@@ -390,10 +412,19 @@ function discoverInstalls() {
   const prog86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
   const appdata = process.env.APPDATA;
 
+  // Standard bases
+  const bases = [
+    local,
+    home ? path.join(home, 'AppData', 'Local') : null,
+    home,
+    prog,
+    prog86,
+    appdata
+  ].filter(Boolean);
+
   // CLI locations
-  for (const base of [local, home, prog, prog86]) {
-    if (!base) continue;
-    for (const name of ['agy']) {
+  for (const base of bases) {
+    for (const name of ['agy', 'Antigravity']) {
       const p = path.join(base, name);
       try { if (fs.statSync(p).isDirectory()) roots.push(p); } catch (_) {}
     }
@@ -404,13 +435,40 @@ function discoverInstalls() {
     'Antigravity IDE',
     'Antigravity',
     'Antigravity 2.0',
+    'Google Antigravity'
   ];
-  for (const base of [local ? path.join(local, 'Programs') : null, prog, prog86]) {
-    if (!base) continue;
+
+  const programBases = [
+    local ? path.join(local, 'Programs') : null,
+    home ? path.join(home, 'AppData', 'Local', 'Programs') : null,
+    prog,
+    prog86
+  ].filter(Boolean);
+
+  for (const base of programBases) {
     for (const name of ideNames) {
       const p = path.join(base, name);
       try { if (fs.statSync(p).isDirectory()) roots.push(p); } catch (_) {}
     }
+  }
+
+  // Scan all user profiles on Windows C:\Users
+  if (os.platform() === 'win32' || fs.existsSync('C:\\Users')) {
+    try {
+      const usersDir = 'C:\\Users';
+      if (fs.existsSync(usersDir)) {
+        const users = fs.readdirSync(usersDir);
+        for (const u of users) {
+          const userLocalProg = path.join(usersDir, u, 'AppData', 'Local', 'Programs');
+          for (const name of ideNames) {
+            const p = path.join(userLocalProg, name);
+            try { if (fs.statSync(p).isDirectory()) roots.push(p); } catch (_) {}
+          }
+          const userAgy = path.join(usersDir, u, 'AppData', 'Local', 'agy');
+          try { if (fs.statSync(userAgy).isDirectory()) roots.push(userAgy); } catch (_) {}
+        }
+      }
+    } catch (_) {}
   }
 
   // VS Code extensions — Antigravity extension in various editors

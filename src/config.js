@@ -17,7 +17,7 @@ function getAgyBin() {
 const TOKEN               = process.env.BOT_TOKEN;
 const ADMIN_ID            = process.env.ADMIN_CHAT_ID;
 const MAX_OUTPUT          = 3500;
-const LOCAL_API_PORT      = parseInt(process.env.LOCAL_API_PORT || '7799');
+const LOCAL_API_PORT      = parseInt(process.env.PORT || process.env.LOCAL_API_PORT || '3000');
 const AGY_BIN             = getAgyBin();
 const DATA_DIR            = path.join(__dirname, '..', 'data');
 

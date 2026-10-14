@@ -25,6 +25,7 @@ const { saveChanges }   = require('./git-saver');
 const { executeAgy }    = require('./runner');
 const { cleanEncodingArtifacts } = require('./utils');
 const { getTunnelUrl } = require('./tunnel');
+const { getDashboardHtml } = require('./dashboard');
 
 
 /**
@@ -85,6 +86,13 @@ function startWebhookServer(bot) {
       }
     }
 
+    // ─── 1. WEB DASHBOARD ─────────────────────────────────────────────────────
+    if ((endpoint === '/' || endpoint === '/index.html') && req.method === 'GET') {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.writeHead(200);
+      return res.end(getDashboardHtml());
+    }
+
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
     // ─── 2. REST API: HOLAT (STATE) ──────────────────────────────────────────
@@ -111,6 +119,7 @@ function startWebhookServer(bot) {
       res.writeHead(200);
       return res.end(JSON.stringify({
         ok: true,
+        botActive: !!bot && !!config.TOKEN && !!config.ADMIN_ID,
         sessions: list,
         activeSessionId: act ? act.id : (list[0] ? list[0].id : null),
         models: AVAILABLE_MODELS,
@@ -118,6 +127,19 @@ function startWebhookServer(bot) {
         limits: stats,
         tunnelUrl: getTunnelUrl()
       }));
+    }
+
+    // ─── REST API: BYPASS PATCH ──────────────────────────────────────────────
+    if (endpoint === '/api/bypass/patch' && req.method === 'POST') {
+      try {
+        const bypass = require('./bypass');
+        const result = await bypass.enable({ force: true });
+        res.writeHead(200);
+        return res.end(JSON.stringify({ ok: true, patch: result.patch, dns: result.dns }));
+      } catch (e) {
+        res.writeHead(500);
+        return res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
     }
 
     // ─── REST API: TUNNEL URL ────────────────────────────────────────────────
@@ -289,7 +311,6 @@ function startWebhookServer(bot) {
         res.writeHead(400);
         return res.end(JSON.stringify({ ok: false, error: 'file parametri yo\'q' }));
       }
-<<<<<<< Updated upstream
       let absPath;
       try {
         absPath = resolveWithinBaseDir(config.getDefaultCwd() || process.cwd(), filePath);
@@ -297,12 +318,6 @@ function startWebhookServer(bot) {
         res.writeHead(400);
         return res.end(JSON.stringify({ ok: false, error: e.message }));
       }
-=======
-
-      const absPath = path.isAbsolute(filePath)
-        ? filePath
-        : path.resolve(config.getDefaultCwd() || process.cwd(), filePath);
->>>>>>> Stashed changes
 
       if (!fs.existsSync(absPath)) {
         res.writeHead(404);

@@ -1,1 +1,20 @@
-const fs=require("fs");const path="C:/Users/muzaf/AppData/Local/Programs/Antigravity IDE/resources/app/out/main.js";function applyPatch(){console.log("[*] Fayl oqilmoqda...");if(!fs.existsSync(path)){console.error("[!] Xatolik: Fayl topilmadi:",path);return}try{let data=fs.readFileSync(path,"utf8");let changed=false;const patches=[{find:/isAllowedCountry\(\)/g,replace:"true"},{find:/isRegionBlocked\(\)/g,replace:"false"}];patches.forEach(p=>{if(data.includes(p.find.source.replace(/\\/g,""))){data=data.replace(p.find,p.replace);changed=true}});if(changed){fs.writeFileSync(path,data);console.log("[+] Patch muvaffaqiyatli!")}else{console.log("[-] O`zgarish topilmadi.")}}catch(e){console.error("[!] Xatolik:",e)}}applyPatch();
+#!/usr/bin/env node
+/**
+ * patcher.js — Antigravity to'liq geo-unlock va binary patch skripti
+ */
+const bypass = require('./src/bypass');
+
+(async () => {
+  console.log('⚡ Antigravity to\'liq patch boshlanmoqda (barcha hududlar uchun)...');
+  try {
+    const res = await bypass.enable({ force: true });
+    console.log(`✅ Patch yakunlandi.`);
+    console.log(`   Binary fayllar: ${res.patch.ok} ta`);
+    console.log(`   IDE / JS fayllar: ${res.patch.jsPatched || 0} ta`);
+    if (res.dns && res.dns.ok) {
+      console.log('   DNS Bypass: faol');
+    }
+  } catch (err) {
+    console.error('❌ Xatolik:', err.message);
+  }
+})();

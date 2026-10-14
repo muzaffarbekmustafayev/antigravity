@@ -14,11 +14,10 @@ if (!config.TOKEN) missingConfig.push('BOT_TOKEN');
 if (!config.ADMIN_ID) missingConfig.push('ADMIN_CHAT_ID');
 
 if (missingConfig.length > 0) {
-  console.error(
-    `❌ Majburiy sozlamalar topilmadi: ${missingConfig.join(', ')}.\n` +
-    'Loyiha papkasida .env fayl yarating va .env.example dagi qiymatlarni kiriting.'
+  console.warn(
+    `⚠️ Telegram sozlamalari topilmadi: ${missingConfig.join(', ')}.\n` +
+    `Telegram bot kutish rejimida. Web Dashboard va REST API serveri http://0.0.0.0:${config.LOCAL_API_PORT} da faol ishlaydi.`
   );
-  process.exit(1);
 }
 
 // Global xatoliklarni ushlash
@@ -61,10 +60,20 @@ try {
 
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-// 1. Telegram botni ishga tushirish
-const bot = initBot();
+// 1. Telegram botni ishga tushirish (faqat sozlamalar mavjud bo'lsa)
+let bot = null;
+if (config.TOKEN && config.ADMIN_ID) {
+  try {
+    bot = initBot();
+    console.log('🤖 Telegram bot muvaffaqiyatli ulandi va buyruqlarni kutmoqda.');
+  } catch (err) {
+    console.error('❌ Telegram bot ishga tushirishda xato:', err.message);
+  }
+} else {
+  console.log('ℹ️ Telegram bot nofaol (.env da BOT_TOKEN yoki ADMIN_CHAT_ID belgilanmagan).');
+}
 
-// 2. Mahalliy HTTP Webhook API serverini ishga tushirish (ichki integratsiyalar uchun)
+// 2. Mahalliy HTTP Webhook API va Web Dashboard serverini ishga tushirish
 startWebhookServer(bot);
 
 // 3. Telegram Menu tugmasini standart rejimga o'tkazish
@@ -82,4 +91,4 @@ if (bot && config.ADMIN_ID) {
 // Qolgan tunnel jarayonlarini tozalash
 cleanupTunnel();
 
-console.log('✅ Bot muvaffaqiyatli ishga tushdi va buyruqlarni kutmoqda.');
+console.log(`✅ Antigravity Remote Terminal faol: http://localhost:${config.LOCAL_API_PORT}`);

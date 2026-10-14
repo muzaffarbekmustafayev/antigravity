@@ -125,7 +125,7 @@ function render() {
 }
 
 // ─── Patch amaliyoti ───────────────────────────────────────────────────────────
-async function actionPatch() {
+async function actionPatch(interactive = true) {
   cls();
   console.log('');
   console.log(center(`${C.bold}${C.yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${C.reset}`));
@@ -267,9 +267,11 @@ async function actionPatch() {
     console.log(center(`${C.dim}Avval Antigravity IDE yoki CLI o'rnating.${C.reset}`));
   }
 
-  console.log('');
-  console.log(`  ${C.dim}Davom etish uchun har qanday tugmani bosing...${C.reset}`);
-  await waitForKey();
+  if (interactive && process.stdin.isTTY) {
+    console.log('');
+    console.log(`  ${C.dim}Davom etish uchun har qanday tugmani bosing...${C.reset}`);
+    await waitForKey();
+  }
 }
 
 // ─── Telegram Bot ──────────────────────────────────────────────────────────────
@@ -291,12 +293,14 @@ async function actionBot() {
   const adminId = process.env.ADMIN_CHAT_ID;
 
   if (!token || !adminId) {
-    console.log(err('.env faylida BOT_TOKEN yoki ADMIN_CHAT_ID topilmadi!'));
-    console.log(info('.env.example faylidan nusxa oling va sozlang.'));
+    console.log(warn('⚠️ .env faylida BOT_TOKEN yoki ADMIN_CHAT_ID belgilanmagan.'));
+    console.log(info(`Server Web Dashboard rejimida ishga tushirilmoqda (http://localhost:${process.env.PORT || '3000'})...`));
+    console.log(info('Telegram botni to\'liq ulash uchun .env fayliga BOT_TOKEN va ADMIN_CHAT_ID kiriting.'));
     console.log('');
-    console.log(`  ${C.dim}Davom etish uchun har qanday tugmani bosing...${C.reset}`);
-    setupKeyboard();
-    await waitForKey();
+    console.log(`  ${C.dim}Server ishlamoqda. Chiqish uchun: ${C.bold}Ctrl+C${C.reset}${C.dim} bosing.${C.reset}`);
+    console.log(LINE);
+    console.log('');
+    require('./server.js');
     return;
   }
 
@@ -323,8 +327,14 @@ function actionExit() {
 }
 
 // ─── Keyboard ──────────────────────────────────────────────────────────────────
+let dataListener = null;
+
 function teardownKeyboard() {
   process.stdin.removeAllListeners('keypress');
+  if (dataListener) {
+    process.stdin.removeListener('data', dataListener);
+    dataListener = null;
+  }
   if (process.stdin.isTTY) {
     try { process.stdin.setRawMode(false); } catch (_) {}
   }
@@ -359,7 +369,19 @@ function setupKeyboard() {
   try { process.stdin.resume(); } catch (_) {}
 
   // Remove existing listeners to prevent duplicates
-  process.stdin.removeAllListeners('keypress');
+  teardownKeyboard();
+  if (process.stdin.isTTY) {
+    try { process.stdin.setRawMode(true); } catch (_) {}
+  }
+
+  dataListener = (chunk) => {
+    const s = chunk.toString().trim();
+    if (['1', '2', '3'].includes(s)) {
+      selectedIdx = parseInt(s, 10) - 1;
+      handleSelect(s);
+    }
+  };
+  process.stdin.on('data', dataListener);
 
   process.stdin.on('keypress', (str, key) => {
     if (!key) return;
@@ -398,7 +420,7 @@ function setupKeyboard() {
   const arg = process.argv[2];
   if (arg) {
     if (['1', 'patch', 'unlock'].includes(arg)) {
-      await actionPatch();
+      await actionPatch(false);
       process.exit(0);
     }
     if (['2', 'bot', 'server'].includes(arg)) {

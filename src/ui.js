@@ -33,24 +33,13 @@ function buildProgressBar(used, max, length = 10) {
 }
 
 // ─── Asosiy Doimiy Klaviatura (Reply Keyboard) ────────────────────────────────
-<<<<<<< Updated upstream
-const MAIN_KEYBOARD = {
-  keyboard: [
-    [{ text: '🤖 Model' }, { text: '⚡ Tezlik' }, { text: '🌍 Country' }],
-    [{ text: '📂 Sessiyalar' }, { text: '📊 Limit' }, { text: '💾 Saqlash' }],
-    [{ text: '📁 Fayllar' }, { text: '🛑 To\'xtatish' }, { text: '⚙️ Sozlamalar' }],
-    [{ text: '❓ Yordam' }],
-  ],
-  resize_keyboard: true,
-  persistent: true,
-};
-=======
 function getMainKeyboard() {
   return {
     keyboard: [
-      [{ text: '🤖 Model' }, { text: '⚡ Tezlik' }, { text: '📊 Limit' }],
-      [{ text: '📂 Sessiyalar' }, { text: '💾 Saqlash' }, { text: '🗑️ Tozalash' }],
+      [{ text: '🤖 Model' }, { text: '⚡ Tezlik' }, { text: '🌍 Country' }],
+      [{ text: '📂 Sessiyalar' }, { text: '📊 Limit' }, { text: '💾 Saqlash' }],
       [{ text: '📁 Fayllar' }, { text: '🛑 To\'xtatish' }, { text: '⚙️ Sozlamalar' }],
+      [{ text: '❓ Yordam' }],
     ],
     resize_keyboard: true,
     persistent: true,
@@ -58,7 +47,6 @@ function getMainKeyboard() {
 }
 
 const MAIN_KEYBOARD = getMainKeyboard();
->>>>>>> Stashed changes
 
 // ─── Sessiyalar Ro'yxati UI ───────────────────────────────────────────────────
 function buildSessionsKeyboard(chatId) {
@@ -105,7 +93,6 @@ function buildSessionsListText(chatId) {
     const isAct   = sid === activeSid;
     const mInfo   = getModelInfo(sess.model);
     const effInfo = getEffortInfo(sess.effort);
-<<<<<<< Updated upstream
     const runTag  = sess.proc ? ' ⚙️' : '';
     const mark    = isAct ? '⭐ ' : '• ';
     const status  = isAct ? 'FAOL' : 'KUTMOQDA';
@@ -114,30 +101,12 @@ function buildSessionsListText(chatId) {
     lines.push(
       `${mark}<b>${escapeHtml(sess.name)}</b> · <i>${status}</i>${runTag}\n` +
       `   ${mInfo.emoji} <b>${escapeHtml(mInfo.label)}</b> · ${effInfo.emoji} ${escapeHtml(effInfo.label)}\n` +
-      `   📁 <code>${escapeHtml(shortPath(sess.cwd))}</code> · <b>${sess.cmdCount || sess.history.length} ta</b>${countryTag}`
-=======
-    const runTag  = sess.proc ? ' ⚙️ <i>(Bajarilmoqda...)</i>' : '';
-    const badge   = isAct ? '⭐ <b>[FAOL SESSIYA]</b>' : `<b>${idx}.</b>`;
-
-    lines.push(
-      `${badge} <b>${escapeHtml(sess.name)}</b>${runTag}\n` +
-      `   🤖 <b>Model:</b> ${mInfo.emoji} ${escapeHtml(mInfo.label)} (⚡ ${effInfo.label})\n` +
-      `   📁 <b>Jild:</b> <code>${escapeHtml(shortPath(sess.cwd))}</code>\n` +
-      `   💬 <b>Yozishmalar:</b> ${sess.history ? sess.history.length : (sess.cmdCount || 0)} ta buyruq`
->>>>>>> Stashed changes
+      `   📁 <code>${escapeHtml(shortPath(sess.cwd))}</code> · <b>${sess.cmdCount || (sess.history ? sess.history.length : 0)} ta</b>${countryTag}`
     );
     idx++;
   }
 
-<<<<<<< Updated upstream
-  return `🧭 <b>Sessiyalar paneli</b>\n━━━━━━━━━━━━━━━━━━━━\n${lines.join('\n\n')}`;
-=======
-  return (
-    `📂 <b>Mavjud sessiyalar ro'yxati (${sessions.size} ta):</b>\n\n` +
-    lines.join('\n\n') +
-    `\n\n<i>Kerakli sessiyaga o'tish yoki sozlash uchun quyidagi tugmalardan birini bosing:</i>`
-  );
->>>>>>> Stashed changes
+  return `🧭 <b>Sessiyalar paneli (${sessions.size} ta)</b>\n━━━━━━━━━━━━━━━━━━━━\n${lines.join('\n\n')}`;
 }
 
 // ─── Aniq Sessiya Kartasi ─────────────────────────────────────────────────────

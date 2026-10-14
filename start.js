@@ -1,1 +1,5 @@
-const {execSync}=require("child_process");const readline=require("readline").createInterface({input:process.stdin,output:process.stdout});console.log("=== ANTIGRAVITY MANAGER ===");console.log("1. Patch (Geo-unlock)\n2. Tozalash\n3. Botni ishga tushurish");readline.question("Tanlang (1-3): ",(ans)=>{switch(ans){case "1": try{execSync("node patcher.js",{stdio:"inherit"})};break;case "2": try{execSync("node clean.js",{stdio:"inherit"})};break;case "3": console.log("[*] Bot ishga tushirilmoqda..."); break;default: console.log("Noto`g`ri tanlov.")}readline.close()});
+#!/usr/bin/env node
+/**
+ * start.js — Antigravity Manager ishga tushiruvchi
+ */
+require('./cli.js');
