@@ -68,7 +68,14 @@ function executeAgy({ sess, text, onProgress }) {
       env: Object.assign({}, process.env, {
         PYTHONIOENCODING: 'utf-8',
         LANG: 'en_US.UTF-8',
-        LC_ALL: 'en_US.UTF-8'
+        LC_ALL: 'en_US.UTF-8',
+        COUNTRY: sess.country || config.getEffectiveCountry() || 'nl',
+        AGY_COUNTRY: sess.country || config.getEffectiveCountry() || 'nl',
+        VPN_COUNTRY: 'NL',
+        VPN_COUNTRY_CODE: 'NL',
+        DEFAULT_COUNTRY: 'nl',
+        // Also ensure AG_LS_PROXY variable is kept intact for proxy routing
+        AG_LS_PROXY: process.env.AG_LS_PROXY || process.env.https_proxy || process.env.HTTPS_PROXY || ''
       })
     }, (error, stdout, stderr) => {
       if (progressInterval) clearInterval(progressInterval);

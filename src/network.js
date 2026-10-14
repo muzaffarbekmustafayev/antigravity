@@ -27,13 +27,14 @@ function fetchCurrentIp(timeoutMs = 4000) {
       res.on('end', () => {
         try {
           const info = JSON.parse(data);
+          const isVpnCountry = info.country !== 'RU' && info.country !== 'UZ';
           resolve({
             ok: true,
             ip: info.ip,
-            country: info.country,
+            country: info.country || 'NL',
             city: info.city,
             org: info.org,
-            isVpn: info.country !== 'RU',
+            isVpn: isVpnCountry || /sota|vpn|wireguard|cloud|hosting|datacenter/i.test(info.org || ''),
           });
         } catch (_) {
           resolve({ ok: false, error: 'JSON parse error' });

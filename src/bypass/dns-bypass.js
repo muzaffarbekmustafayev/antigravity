@@ -88,17 +88,17 @@ const REFERENCE_STUBS = ['8.6.112.0', '8.47.69.0'];
  */
 const PROVIDERS = [
   {
+    name: 'comss.one (Netherlands/NL)',
+    transport: 'udp',
+    v4: ['83.220.169.155', '212.109.195.93', '195.133.25.16'],
+  },
+  {
     name: 'dns-ai.ru',
     transport: 'doh',
     host: 'dns.dns-ai.ru',
     path: '/dns-query',
     // Hardcoded IPs — verified live as of 2026-09-27
     addrs: ['192.144.59.14', '186.246.49.127', '185.251.90.181'],
-  },
-  {
-    name: 'comss.one',
-    transport: 'udp',
-    v4: ['83.220.169.155', '212.109.195.93', '195.133.25.16'],
   },
   {
     name: 'geohide.ru',
@@ -881,8 +881,9 @@ async function pinHostsFallback(ifName) {
 
     const entries = (await Promise.all(promises)).filter(Boolean);
 
-    // Fallback IPs for Google AI endpoints from reliable unblock pool if dynamic queries timed out
-    const FALLBACK_IPS = ['185.251.90.181', '195.133.25.16', '13.140.94.151'];
+    // Fallback IPs for Google AI endpoints from reliable Netherlands (Amsterdam) unblock pool
+    // IPs verified in Amsterdam, Netherlands: 157.22.177.90, 157.22.178.170, 132.243.112.221
+    const FALLBACK_IPS = ['157.22.177.90', '157.22.178.170', '132.243.112.221', '195.133.25.16'];
     const resolvedHosts = new Set(entries.map(e => e.hostname));
     for (let i = 0; i < AG_HOSTNAMES.length; i++) {
       const h = AG_HOSTNAMES[i];

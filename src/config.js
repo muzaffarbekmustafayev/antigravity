@@ -29,7 +29,7 @@ let currentDefaultCwd   = process.env.DEFAULT_CWD || null;
 let globalFiveHourLimit = parseInt(process.env.FIVE_HOUR_LIMIT || '250');
 let globalModel         = process.env.DEFAULT_MODEL  || 'gemini-3.8-flash';
 let globalEffort        = process.env.DEFAULT_EFFORT || 'high';
-let globalCountry       = (process.env.DEFAULT_COUNTRY || process.env.AGY_COUNTRY || process.env.VPN_COUNTRY || process.env.VPN_COUNTRY_CODE || 'us').trim();
+let globalCountry       = (process.env.DEFAULT_COUNTRY || process.env.AGY_COUNTRY || process.env.VPN_COUNTRY || process.env.VPN_COUNTRY_CODE || 'nl').trim();
 
 function normalizeCountry(value) {
   const raw = String(value || '').trim();
@@ -46,7 +46,7 @@ function setDefaultCwd(newPath) {
 }
 
 function getDefaultCountry() {
-  return normalizeCountry(globalCountry) || 'us';
+  return normalizeCountry(globalCountry) || 'nl';
 }
 
 function setDefaultCountry(country) {
