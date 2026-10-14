@@ -383,12 +383,21 @@ function findBinaryTargets(installRoot) {
   // Language Server binaries (core of Antigravity)
   candidates.push(path.join(installRoot, `language_server${ext}`));
   candidates.push(path.join(installRoot, 'bin', `language_server${ext}`));
+  candidates.push(path.join(installRoot, `language_server_windows_x64${ext}`));
+  candidates.push(path.join(installRoot, 'bin', `language_server_windows_x64${ext}`));
+  candidates.push(path.join(installRoot, `language_server_windows_arm64${ext}`));
+  candidates.push(path.join(installRoot, 'bin', `language_server_windows_arm64${ext}`));
 
-  // IDE-bundled language server
+  // IDE-bundled and extension-bundled language server
   if (isWin) {
     candidates.push(path.join(installRoot, 'resources', 'app', 'out', `language_server${ext}`));
     candidates.push(path.join(installRoot, 'resources', `language_server${ext}`));
+    candidates.push(path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server_windows_x64${ext}`));
+    candidates.push(path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server${ext}`));
+    candidates.push(path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server_windows_arm64${ext}`));
   }
+  candidates.push(path.join(installRoot, 'bin', `language_server_windows_x64${ext}`));
+  candidates.push(path.join(installRoot, 'dist', `language_server_windows_x64${ext}`));
 
   return candidates.filter(p => {
     try { return fs.statSync(p).isFile(); } catch (_) { return false; }
