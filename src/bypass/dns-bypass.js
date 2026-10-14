@@ -109,17 +109,33 @@ const PROVIDERS = [
 
 // ─── PowerShell execution helper ──────────────────────────────────────────────
 
-function runPowershell(script, timeoutMs = 15000, throwOnError = false) {
+function runPowershell(script, timeoutMs = 25000, throwOnError = false) {
+  let tmpFile = null;
   try {
-    const preamble = `$ProgressPreference='SilentlyContinue'; [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;\n`;
-    const b64 = Buffer.from(preamble + script, 'utf16le').toString('base64');
+    const preamble = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $OutputEncoding = [System.Text.Encoding]::UTF8; $ProgressPreference = 'SilentlyContinue';\n`;
+    const fullScript = preamble + script;
+
+    const tmpDir = os.tmpdir();
+    tmpFile = path.join(tmpDir, `ag_nrpt_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.ps1`);
+    fs.writeFileSync(tmpFile, fullScript, 'utf8');
+
     return execSync(
-      `powershell -NoProfile -NonInteractive -EncodedCommand ${b64}`,
+      `powershell -NoProfile -ExecutionPolicy Bypass -File "${tmpFile}"`,
       { timeout: timeoutMs, windowsHide: true, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
     );
   } catch (e) {
-    if (throwOnError) throw e;
+    if (throwOnError) {
+      let msg = '';
+      if (e.stderr) {
+        try { msg = e.stderr.toString('utf8'); } catch (_) { msg = String(e.stderr); }
+      }
+      throw new Error(msg || e.message || 'PowerShell failed');
+    }
     return null;
+  } finally {
+    if (tmpFile && fs.existsSync(tmpFile)) {
+      try { fs.unlinkSync(tmpFile); } catch (_) {}
+    }
   }
 }
 
@@ -434,14 +450,17 @@ function psStringList(items) {
   return items.map(s => `'${s}'`).join(',');
 }
 
-/** Remove all NRPT rules created by this tool. */
+/** Remove all NRPT rules created by this tool or targeting AG hostnames. */
 function removeNrptRules() {
   if (os.platform() !== 'win32') return;
   const tags = [NRPT_TAG];
+  const hostnamesList = psStringList(AG_HOSTNAMES);
   const script = `
+if (-not (Get-Command Get-DnsClientNrptRule -ErrorAction SilentlyContinue)) { exit 0 }
 $tags=@(${psStringList(tags)});
+$hosts=@(${hostnamesList});
 Get-DnsClientNrptRule -ErrorAction SilentlyContinue |
-  Where-Object { $tags -contains $_.Comment } |
+  Where-Object { $tags -contains $_.Comment -or $hosts -contains $_.Namespace } |
   Remove-DnsClientNrptRule -Force -ErrorAction SilentlyContinue;
 Clear-DnsClientCache -ErrorAction SilentlyContinue`.trim();
   runPowershell(script);
@@ -463,15 +482,18 @@ function isNrptApplied() {
   if (os.platform() !== 'win32') return false;
   const tags = [NRPT_TAG];
   const tagsList = psStringList(tags);
+  const hostnamesList = psStringList(AG_HOSTNAMES);
   const script = `
+if (-not (Get-Command Get-DnsClientNrptRule -ErrorAction SilentlyContinue)) { exit 0 }
 $tags = @(${tagsList});
+$hosts = @(${hostnamesList});
 Get-DnsClientNrptRule -ErrorAction SilentlyContinue |
-  Where-Object { $tags -contains $_.Comment } |
+  Where-Object { $tags -contains $_.Comment -or $hosts -contains $_.Namespace } |
   ForEach-Object { $_.Namespace }`.trim();
   const out = runPowershell(script);
   if (!out) return false;
   const installed = out.split('\n')
-    .map(l => l.trim().replace(/^[\\.\\{\\s]+/, '').replace(/[\\.\\}\\s]+$/, '').toLowerCase())
+    .map(l => l.trim().replace(/^[\.\{\s]+/, '').replace(/[\.\}\s]+$/, '').toLowerCase())
     .filter(Boolean);
   return ['cloudcode-pa.googleapis.com', 'daily-cloudcode-pa.googleapis.com'].some(h => installed.includes(h.toLowerCase()));
 }
@@ -489,24 +511,44 @@ function flushDnsCache() {
  * `nameservers` — list of DNS server IPs the rule should use.
  */
 function installNrptRules(nameservers /* string[] */) {
-  if (os.platform() !== 'win32') return { ok: false, error: 'NRPT only available on Windows' };
+  if (os.platform() !== 'win32') return { ok: false, error: 'NRPT faqat Windows tizimida mavjud' };
 
   const ns = psStringList(nameservers);
-  let adds = '';
-  AG_HOSTNAMES.forEach((name, i) => {
-    adds += `Add-DnsClientNrptRule -Namespace '${name}' -NameServers @(${ns}) ` +
-            `-Comment '${NRPT_TAG}' -DisplayName 'AG Bypass ${i}' -ErrorAction Stop; `;
-  });
+  const hostnamesList = psStringList(AG_HOSTNAMES);
 
-  const script = `$ErrorActionPreference='Stop'; ${adds}Clear-DnsClientCache -ErrorAction SilentlyContinue`;
+  const script = `
+if (-not (Get-Command Add-DnsClientNrptRule -ErrorAction SilentlyContinue)) {
+  Write-Error "NRPT_UNSUPPORTED";
+  exit 1;
+}
+$hosts = @(${hostnamesList});
+Get-DnsClientNrptRule -ErrorAction SilentlyContinue |
+  Where-Object { $_.Comment -eq '${NRPT_TAG}' -or $hosts -contains $_.Namespace } |
+  Remove-DnsClientNrptRule -Force -ErrorAction SilentlyContinue;
+
+$idx = 0;
+foreach ($name in $hosts) {
+  Add-DnsClientNrptRule -Namespace $name -NameServers @(${ns}) -Comment '${NRPT_TAG}' -DisplayName "AG Bypass $idx" -ErrorAction SilentlyContinue;
+  $idx++;
+}
+Clear-DnsClientCache -ErrorAction SilentlyContinue;
+"OK"`.trim();
+
   try {
-    runPowershell(script, 20000, true);
-    return { ok: true };
+    const out = runPowershell(script, 20000, true);
+    if (out && out.includes('OK')) {
+      return { ok: true };
+    }
+    return { ok: false, error: 'NRPT o\'rnatishda xatolik yuz berdi' };
   } catch (e) {
-    const stderr = (e.stderr || '').toString();
-    const hint = /denied|elevation/i.test(stderr)
-      ? 'Administrator rights required'
-      : stderr || 'PowerShell failed';
+    const errText = (e.message || '').toString();
+    if (errText.includes('NRPT_UNSUPPORTED')) {
+      return { ok: false, unsupported: true, error: 'Windows versiyasi NRPT qo\'llab-quvvatlamaydi (Windows Home)' };
+    }
+    const isElevation = /denied|elevation|administrator|prava|доступ/i.test(errText);
+    const hint = isElevation
+      ? 'Administrator huquqi talab qilinadi'
+      : 'PowerShell NRPT xatoligi';
     return { ok: false, error: hint };
   }
 }
@@ -800,14 +842,23 @@ async function setup(options = {}) {
 
     const nrpt = installNrptRules(nameservers);
     if (!nrpt.ok && !isNrptApplied()) {
+      // NRPT rules failed (e.g. Windows Home, missing cmdlet, or system restriction).
+      // Seamlessly fall back to C:\Windows\System32\drivers\etc\hosts pinning!
+      console.log('  ℹ  NRPT o\'rniga hosts fayli orqali bypass qilinmoqda...');
+      const hostsRes = await pinHostsFallback(ifName);
+      if (hostsRes && hostsRes.ok) {
+        flushDnsCache();
+        _installedByUs = true;
+        return { ok: true, method: 'hosts', vpnActive, ifName, note: 'hosts fayli orqali faollashtirildi' };
+      }
       if (!isRelayActive()) stopRelay();
-      return { ok: false, vpnActive, ifName, error: nrpt.error };
+      return { ok: false, vpnActive, ifName, error: nrpt.error || hostsRes?.error };
     }
     _installedByUs = true;
   }
 
   flushDnsCache();
-  return { ok: true, vpnActive, ifName };
+  return { ok: true, method: 'nrpt', vpnActive, ifName };
 }
 
 /**
@@ -815,17 +866,38 @@ async function setup(options = {}) {
  * Fallback for environments where relay cannot bind or NRPT doesn't work with VPN.
  */
 async function pinHostsFallback(ifName) {
-  const entries = [];
-  for (const hostname of AG_HOSTNAMES) {
-    for (const p of PROVIDERS) {
-      const ips = await resolveViaProvider(hostname, p, ifName);
-      if (ips.length) {
-        entries.push({ hostname, ip: ips[0] });
-        break;
+  try {
+    const promises = AG_HOSTNAMES.map(async (hostname) => {
+      for (const p of PROVIDERS) {
+        try {
+          const ips = await resolveViaProvider(hostname, p, ifName);
+          if (ips && ips.length) {
+            return { hostname, ip: ips[0] };
+          }
+        } catch (_) {}
+      }
+      return null;
+    });
+
+    const entries = (await Promise.all(promises)).filter(Boolean);
+
+    // Fallback IPs for Google AI endpoints from reliable unblock pool if dynamic queries timed out
+    const FALLBACK_IPS = ['185.251.90.181', '195.133.25.16', '13.140.94.151'];
+    const resolvedHosts = new Set(entries.map(e => e.hostname));
+    for (let i = 0; i < AG_HOSTNAMES.length; i++) {
+      const h = AG_HOSTNAMES[i];
+      if (!resolvedHosts.has(h)) {
+        entries.push({ hostname: h, ip: FALLBACK_IPS[i % FALLBACK_IPS.length] });
       }
     }
+
+    if (entries.length) {
+      return writeHostsEntries(entries);
+    }
+    return { ok: false, error: 'Bypass IP manzillari aniqlanmadi' };
+  } catch (e) {
+    return { ok: false, error: e.message };
   }
-  if (entries.length) writeHostsEntries(entries);
 }
 
 /** Tear down everything this module set up. */

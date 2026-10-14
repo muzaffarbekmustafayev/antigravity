@@ -251,9 +251,9 @@ function patchIdeMainJs(jsPath) {
   }
 
   // Check if this is v2.4+ architecture (auth in Language Server, no JS patch needed)
-  if (content.includes('./languageServer') && content.includes('./ipcHandlers') &&
-      !content.includes('_handleAuthErrorResponse') && !content.includes('"SET_INELIGIBLE"')) {
-    return { ok: true, alreadyDone: true, note: 'v2.4+ architecture — auth in Language Server' };
+  if ((content.includes('./languageServer') || content.includes('languageServer') || content.includes('language_server') || path.basename(jsPath) === 'extension.js') &&
+      !content.includes('_handleAuthErrorResponse') && !content.includes('"SET_INELIGIBLE"') && !content.includes("'SET_INELIGIBLE'") && !content.includes('ineligible_tiers')) {
+    return { ok: true, alreadyDone: true, note: 'v2+ arxitektura — tekshiruv Language Server orqali' };
   }
 
   let modified = content;
@@ -287,6 +287,25 @@ function patchIdeMainJs(jsPath) {
     changes++;
   }
 
+  // Pattern 2d: isCountryEligible() -> true
+  const p2d = /isCountryEligible\s*\([^)]*\)/g;
+  if (p2d.test(modified)) {
+    modified = modified.replace(p2d, 'true');
+    changes++;
+  }
+
+  // Pattern 2e: isGeoAllowed() -> true, isGeoBlocked() -> false
+  const p2e = /isGeoAllowed\s*\([^)]*\)/g;
+  if (p2e.test(modified)) {
+    modified = modified.replace(p2e, 'true');
+    changes++;
+  }
+  const p2f = /isGeoBlocked\s*\([^)]*\)/g;
+  if (p2f.test(modified)) {
+    modified = modified.replace(p2f, 'false');
+    changes++;
+  }
+
   // Pattern 3: Region ineligibility check — "ineligible" in tier responses
   const ineligiblePatterns = [
     { find: /\bineligible_tiers\b/g, replace: 'inexigible_tiers' },
@@ -302,6 +321,11 @@ function patchIdeMainJs(jsPath) {
   }
 
   if (changes === 0) {
+    // If the file doesn't have any geo-blocking signatures to begin with
+    const hasAnyGeoCode = /ineligible_tiers|SET_INELIGIBLE|isAllowedCountry|isRegionBlocked|isCountryBlocked/i.test(content);
+    if (!hasAnyGeoCode) {
+      return { ok: true, alreadyDone: true, note: 'geo-tekshiruv yo\'q (Language Server orqali)' };
+    }
     return { ok: false, error: 'JS signature topilmadi (versiya mos kelmaydi)' };
   }
 

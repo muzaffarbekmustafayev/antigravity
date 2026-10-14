@@ -224,7 +224,8 @@ async function actionPatch(interactive = true) {
   // DNS results
   console.log(`  ${C.bold}${C.cyan}DNS BYPASS:${C.reset}`);
   if (dnsResult.ok) {
-    console.log(ok(`${C.bold}${C.green}DNS Bypass muvaffaqiyatli o'rnatildi!${C.reset}`));
+    const methodStr = dnsResult.method === 'hosts' ? ' (hosts fayli orqali)' : ' (NRPT relay orqali)';
+    console.log(ok(`${C.bold}${C.green}DNS Bypass muvaffaqiyatli o'rnatildi${methodStr}!${C.reset}`));
     if (dnsResult.vpnActive) {
       console.log(info(`VPN aktiv — ISP interfeysi: ${dnsResult.ifName || '?'}`));
     }
@@ -351,37 +352,48 @@ function waitForKey() {
   });
 }
 
+let isActionRunning = false;
+
 async function handleSelect(key) {
-  switch (key) {
-    case '1': await actionPatch();       break;
-    case '2': await actionBot();         return; // bot takes over
-    case '3': actionExit();              return;
-    default:  break;
+  if (isActionRunning) return;
+  isActionRunning = true;
+  teardownKeyboard();
+
+  try {
+    switch (key) {
+      case '1': await actionPatch(true);  break;
+      case '2': await actionBot();        return;
+      case '3': actionExit();             return;
+      default:  break;
+    }
+  } finally {
+    isActionRunning = false;
   }
+
   render();
+  setupKeyboard();
 }
 
 function setupKeyboard() {
+  teardownKeyboard();
+
   readline.emitKeypressEvents(process.stdin);
   if (process.stdin.isTTY) {
     try { process.stdin.setRawMode(true); } catch (_) {}
   }
   try { process.stdin.resume(); } catch (_) {}
 
-  // Remove existing listeners to prevent duplicates
-  teardownKeyboard();
-  if (process.stdin.isTTY) {
-    try { process.stdin.setRawMode(true); } catch (_) {}
+  // If not a TTY or in piped mode, listen to data chunk
+  if (!process.stdin.isTTY) {
+    dataListener = (chunk) => {
+      const s = chunk.toString().trim();
+      if (['1', '2', '3'].includes(s)) {
+        selectedIdx = parseInt(s, 10) - 1;
+        handleSelect(s);
+      }
+    };
+    process.stdin.on('data', dataListener);
   }
-
-  dataListener = (chunk) => {
-    const s = chunk.toString().trim();
-    if (['1', '2', '3'].includes(s)) {
-      selectedIdx = parseInt(s, 10) - 1;
-      handleSelect(s);
-    }
-  };
-  process.stdin.on('data', dataListener);
 
   process.stdin.on('keypress', (str, key) => {
     if (!key) return;
