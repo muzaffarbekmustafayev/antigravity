@@ -60,9 +60,16 @@ ADMIN_CHAT_ID=123456789
 DEFAULT_CWD=C:\Users\username\Desktop\my-project
 DEFAULT_MODEL=gemini-3.8-flash
 DEFAULT_EFFORT=high
+# Display label only; it does not select or spoof AGY's network region.
+DEFAULT_COUNTRY=us
+# Optional proxy settings; use only if supported by your AGY CLI version.
+# HTTPS_PROXY=http://127.0.0.1:8080
+# HTTP_PROXY=http://127.0.0.1:8080
 FIVE_HOUR_LIMIT=250
 LOCAL_API_PORT=7799
 ```
+
+AGY uses the host's network route. To route it through a VPN, use a system-wide VPN connection (a browser-only VPN extension does not affect the CLI), or configure a proxy supported by your AGY CLI. The bot passes its environment through to AGY. A `/country` value and `VPN_COUNTRY` are display labels only; they do not change network routing or bypass Google's regional availability, account, or service requirements. Gemini model availability remains subject to Google's supported regions.
 
 #### 4. Run the Bot
 ```bash
@@ -79,6 +86,7 @@ npm start
 | `/sessions` | View and manage interactive session cards |
 | `/model` | Open AI Model selection keyboard |
 | `/effort` or `/speed` | Select model reasoning speed (Low, Medium, High) |
+| `/country` | Set the displayed VPN/region label; network routing is controlled by OS VPN/proxy |
 | `/limit` | View 5-hour rolling limit progress, next reset timer, and statistics |
 | `/newsess <name>` | Create and activate a new session |
 | `/switch <id>` | Switch to a specific session by ID |
@@ -149,9 +157,16 @@ ADMIN_CHAT_ID=112436605
 DEFAULT_CWD=C:\Users\muzaf\Desktop\mzfck\projects
 DEFAULT_MODEL=gemini-3.8-flash
 DEFAULT_EFFORT=high
+# Faqat ko'rsatish yorlig'i; AGY tarmoq hududini tanlamaydi.
+DEFAULT_COUNTRY=us
+# Faqat AGY CLI qo'llasa foydalaning.
+# HTTPS_PROXY=http://127.0.0.1:8080
+# HTTP_PROXY=http://127.0.0.1:8080
 FIVE_HOUR_LIMIT=250
 LOCAL_API_PORT=7799
 ```
+
+AGY kompyuterning tarmoq yo'nalishidan foydalanadi. Uni VPN orqali o'tkazish uchun tizim bo'ylab ishlaydigan VPN ulang (faqat brauzer kengaytmasi CLI trafigini yo'naltirmaydi) yoki AGY CLI qo'llaydigan proxy sozlang. Bot muhit o'zgaruvchilarini AGY jarayoniga uzatadi. `/country` va `VPN_COUNTRY` faqat ko'rsatish yorlig'i; ular tarmoqni o'zgartirmaydi va Google'ning hududiy cheklovlarini chetlab o'tmaydi. Gemini modellari Google qo'llab-quvvatlaydigan hududlarda mavjud bo'lishi mumkin.
 
 #### 3. Ishga Tushirish
 ```bash
@@ -168,6 +183,7 @@ npm start
 | `/sessions` | Interaktiv sessiyalar ro'yxati va boshqaruv paneli |
 | `/model` | AI modelini tanlash oynasi |
 | `/effort` yoki `/speed` | Model ishlash tezligini tanlash (Low, Medium, High) |
+| `/country` | VPN/hudud yorlig'ini ko'rsatish; haqiqiy yo'nalish OS VPN/proxy orqali |
 | `/limit` | Aniq 5-soatlik limit va tiklanish taymeri |
 | `/newsess <nom>` | Yangi sessiya ochish |
 | `/switch <id>` | Belgilangan sessiyaga o'tish |

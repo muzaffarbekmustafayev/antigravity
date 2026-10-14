@@ -1,6 +1,6 @@
-const { exec } = require('child_process');
-const fs       = require('fs');
-const path     = require('path');
+const { execFile } = require('child_process');
+const fs           = require('fs');
+const path         = require('path');
 const config   = require('./config');
 const { saveSessions, getSession, getActiveSession } = require('./sessions');
 const { saveLimitRecords } = require('./limits');
@@ -39,7 +39,7 @@ function saveChanges(chatId, sid) {
     const hasGit = fs.existsSync(gitDir);
 
     if (hasGit) {
-      exec('git status -s', { cwd: targetCwd }, (err, statusOut) => {
+      execFile('git', ['status', '-s'], { cwd: targetCwd }, (err, statusOut) => {
         const changedFiles = (statusOut || '').trim();
 
         if (!changedFiles) {
@@ -58,36 +58,50 @@ function saveChanges(chatId, sid) {
         const timestamp = new Date().toLocaleString('uz-UZ');
         const commitMsg = `Antigravity save: ${timestamp}`;
 
-        exec(`git add -A && git commit -m "${commitMsg}"`, { cwd: targetCwd }, (commitErr) => {
-          if (commitErr) {
+        execFile('git', ['add', '-A'], { cwd: targetCwd }, (addErr) => {
+          if (addErr) {
             return resolve({
               success: false,
               hasGit: true,
               hasChanges: true,
               message: (
-                '💾 <b>Sessiya saqlandi, ammo Git commit qilishda xato:</b>\n' +
-                `<pre>${escapeHtml(commitErr.message)}</pre>`
+                '💾 <b>Sessiya saqlandi, ammo Git add qilishda xato:</b>\n' +
+                `<pre>${escapeHtml(addErr.message)}</pre>`
               )
             });
           }
 
-          const fileLines = changedFiles.split('\n').slice(0, 15).map(l => `• <code>${escapeHtml(l)}</code>`).join('\n');
-          const extra = changedFiles.split('\n').length > 15 ? '\n<i>... va boshqa fayllar</i>' : '';
+          execFile('git', ['commit', '-m', commitMsg], { cwd: targetCwd }, (commitErr) => {
+            if (commitErr) {
+              return resolve({
+                success: false,
+                hasGit: true,
+                hasChanges: true,
+                message: (
+                  '💾 <b>Sessiya saqlandi, ammo Git commit qilishda xato:</b>\n' +
+                  `<pre>${escapeHtml(commitErr.message)}</pre>`
+                )
+              });
+            }
 
-          return resolve({
-            success: true,
-            hasGit: true,
-            hasChanges: true,
-            commitMsg,
-            message: (
-              '💾 <b>Barcha o\'zgarishlar Git omboriga saqlandi!</b>\n' +
-              '━'.repeat(26) + '\n' +
-              `📁 <b>Jild:</b> <code>${escapeHtml(shortPath(targetCwd))}</code>\n` +
-              `📝 <b>Kommit:</b> <code>${escapeHtml(commitMsg)}</code>\n\n` +
-              '<b>Saqlangan fayllar:</b>\n' +
-              fileLines + extra + '\n' +
-              '━'.repeat(26)
-            )
+            const fileLines = changedFiles.split('\n').slice(0, 15).map(l => `• <code>${escapeHtml(l)}</code>`).join('\n');
+            const extra = changedFiles.split('\n').length > 15 ? '\n<i>... va boshqa fayllar</i>' : '';
+
+            return resolve({
+              success: true,
+              hasGit: true,
+              hasChanges: true,
+              commitMsg,
+              message: (
+                '💾 <b>Barcha o\'zgarishlar Git omboriga saqlandi!</b>\n' +
+                '━'.repeat(26) + '\n' +
+                `📁 <b>Jild:</b> <code>${escapeHtml(shortPath(targetCwd))}</code>\n` +
+                `📝 <b>Kommit:</b> <code>${escapeHtml(commitMsg)}</code>\n\n` +
+                '<b>Saqlangan fayllar:</b>\n' +
+                fileLines + extra + '\n' +
+                '━'.repeat(26)
+              )
+            });
           });
         });
       });

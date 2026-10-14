@@ -33,32 +33,56 @@ function buildProgressBar(used, max, length = 10) {
 }
 
 // ─── Asosiy Doimiy Klaviatura (Reply Keyboard) ────────────────────────────────
+<<<<<<< Updated upstream
 const MAIN_KEYBOARD = {
   keyboard: [
-    [{ text: '🤖 Model' }, { text: '⚡ Tezlik' }, { text: '📊 Limit' }],
-    [{ text: '📂 Sessiyalar' }, { text: '💾 Saqlash' }, { text: '📁 Fayllar' }],
-    [{ text: '🛑 To\'xtatish' }, { text: '⚙️ Sozlamalar' }, { text: '❓ Yordam' }],
+    [{ text: '🤖 Model' }, { text: '⚡ Tezlik' }, { text: '🌍 Country' }],
+    [{ text: '📂 Sessiyalar' }, { text: '📊 Limit' }, { text: '💾 Saqlash' }],
+    [{ text: '📁 Fayllar' }, { text: '🛑 To\'xtatish' }, { text: '⚙️ Sozlamalar' }],
+    [{ text: '❓ Yordam' }],
   ],
   resize_keyboard: true,
   persistent: true,
 };
+=======
+function getMainKeyboard() {
+  return {
+    keyboard: [
+      [{ text: '🤖 Model' }, { text: '⚡ Tezlik' }, { text: '📊 Limit' }],
+      [{ text: '📂 Sessiyalar' }, { text: '💾 Saqlash' }, { text: '🗑️ Tozalash' }],
+      [{ text: '📁 Fayllar' }, { text: '🛑 To\'xtatish' }, { text: '⚙️ Sozlamalar' }],
+    ],
+    resize_keyboard: true,
+    persistent: true,
+  };
+}
+
+const MAIN_KEYBOARD = getMainKeyboard();
+>>>>>>> Stashed changes
 
 // ─── Sessiyalar Ro'yxati UI ───────────────────────────────────────────────────
 function buildSessionsKeyboard(chatId) {
-  const activeSid = activeSession.get(chatId.toString());
+  const activeSid = (activeSession.get(chatId ? chatId.toString() : '')) || (sessions.keys().next().value);
   const buttons   = [];
 
+  let idx = 1;
   for (const [sid, sess] of sessions) {
     const isAct   = sid === activeSid;
     const mInfo   = getModelInfo(sess.model);
     const effInfo = getEffortInfo(sess.effort);
     const runTag  = sess.proc ? ' ⚙️' : '';
-    const label   = `${isAct ? '⭐ ' : ''}${sess.name} [${mInfo.emoji} ${effInfo.label}]${runTag}`;
 
-    buttons.push([
-      { text: label,             callback_data: 'sess_view_' + sid },
-      { text: isAct ? '✅ Tanlangan' : '👉 O\'tish', callback_data: 'sess_sel_' + sid }
-    ]);
+    if (isAct) {
+      buttons.push([
+        { text: `⭐ ${idx}. ${sess.name} (Faol) · ${mInfo.emoji}${runTag}`, callback_data: 'sess_view_' + sid }
+      ]);
+    } else {
+      buttons.push([
+        { text: `${idx}. ${sess.name} · ${mInfo.emoji}${runTag}`, callback_data: 'sess_view_' + sid },
+        { text: '👉 O\'tish', callback_data: 'sess_sel_' + sid }
+      ]);
+    }
+    idx++;
   }
 
   buttons.push([
@@ -70,31 +94,56 @@ function buildSessionsKeyboard(chatId) {
 }
 
 function buildSessionsListText(chatId) {
-  const activeSid = activeSession.get(chatId.toString());
+  const activeSid = (activeSession.get(chatId ? chatId.toString() : '')) || (sessions.keys().next().value);
   if (sessions.size === 0) {
-    return '📂 <b>Sessiyalar yo\'q.</b>';
+    return '📂 <b>Sessiyalar mavjud emas.</b>\n\nYangi sessiya ochish uchun quyidagi ➕ tugmasini bosing.';
   }
 
   const lines = [];
+  let idx = 1;
   for (const [sid, sess] of sessions) {
     const isAct   = sid === activeSid;
     const mInfo   = getModelInfo(sess.model);
     const effInfo = getEffortInfo(sess.effort);
+<<<<<<< Updated upstream
     const runTag  = sess.proc ? ' ⚙️' : '';
-    const mark    = isAct ? '⭐ ' : '';
+    const mark    = isAct ? '⭐ ' : '• ';
+    const status  = isAct ? 'FAOL' : 'KUTMOQDA';
+    const countryTag = sess.country ? ` · 🌍 <code>${escapeHtml(sess.country)}</code>` : '';
 
     lines.push(
-      `${mark}<b>${escapeHtml(sess.name)}</b> [${mInfo.emoji} ${effInfo.label}]${runTag}\n` +
-      `📁 <code>${escapeHtml(shortPath(sess.cwd))}</code> · <b>${sess.cmdCount || sess.history.length} ta</b>`
+      `${mark}<b>${escapeHtml(sess.name)}</b> · <i>${status}</i>${runTag}\n` +
+      `   ${mInfo.emoji} <b>${escapeHtml(mInfo.label)}</b> · ${effInfo.emoji} ${escapeHtml(effInfo.label)}\n` +
+      `   📁 <code>${escapeHtml(shortPath(sess.cwd))}</code> · <b>${sess.cmdCount || sess.history.length} ta</b>${countryTag}`
+=======
+    const runTag  = sess.proc ? ' ⚙️ <i>(Bajarilmoqda...)</i>' : '';
+    const badge   = isAct ? '⭐ <b>[FAOL SESSIYA]</b>' : `<b>${idx}.</b>`;
+
+    lines.push(
+      `${badge} <b>${escapeHtml(sess.name)}</b>${runTag}\n` +
+      `   🤖 <b>Model:</b> ${mInfo.emoji} ${escapeHtml(mInfo.label)} (⚡ ${effInfo.label})\n` +
+      `   📁 <b>Jild:</b> <code>${escapeHtml(shortPath(sess.cwd))}</code>\n` +
+      `   💬 <b>Yozishmalar:</b> ${sess.history ? sess.history.length : (sess.cmdCount || 0)} ta buyruq`
+>>>>>>> Stashed changes
     );
+    idx++;
   }
 
-  return `📂 <b>Sessiyalar:</b>\n\n${lines.join('\n\n')}`;
+<<<<<<< Updated upstream
+  return `🧭 <b>Sessiyalar paneli</b>\n━━━━━━━━━━━━━━━━━━━━\n${lines.join('\n\n')}`;
+=======
+  return (
+    `📂 <b>Mavjud sessiyalar ro'yxati (${sessions.size} ta):</b>\n\n` +
+    lines.join('\n\n') +
+    `\n\n<i>Kerakli sessiyaga o'tish yoki sozlash uchun quyidagi tugmalardan birini bosing:</i>`
+  );
+>>>>>>> Stashed changes
 }
 
 // ─── Aniq Sessiya Kartasi ─────────────────────────────────────────────────────
 function buildSessionDetailText(sess, chatId) {
-  const isAct   = sess.id === activeSession.get(chatId.toString());
+  const activeSid = (activeSession.get(chatId ? chatId.toString() : '')) || (sessions.keys().next().value);
+  const isAct   = sess.id === activeSid;
   const mInfo   = getModelInfo(sess.model);
   const effInfo = getEffortInfo(sess.effort);
   const statusStr = sess.proc
@@ -102,16 +151,19 @@ function buildSessionDetailText(sess, chatId) {
     : isAct ? '⭐ Faol' : '💤 Kutmoqda';
 
   return (
-    `📌 <b>${escapeHtml(sess.name)}</b> (${statusStr})\n\n` +
+    `📌 <b>${escapeHtml(sess.name)}</b> · <i>${statusStr}</i>\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
     `🤖 <b>Model:</b> ${mInfo.emoji} ${escapeHtml(mInfo.label)}\n` +
-    `⚡ <b>Tezlik:</b> ${effInfo.label}\n` +
+    `⚡ <b>Tezlik:</b> ${effInfo.emoji} ${escapeHtml(effInfo.label)}\n` +
+    `🌍 <b>Hudud yorlig'i:</b> <code>${escapeHtml(sess.country || config.getEffectiveCountry())}</code>\n` +
     `📁 <b>Jild:</b> <code>${escapeHtml(shortPath(sess.cwd))}</code>\n` +
-    `📊 <b>Buyruqlar:</b> ${sess.cmdCount || sess.history.length} ta`
+    `📊 <b>Buyruqlar:</b> ${sess.cmdCount || (sess.history ? sess.history.length : 0)} ta`
   );
 }
 
 function buildSessionDetailKeyboard(sess, chatId) {
-  const isAct = sess.id === activeSession.get(chatId.toString());
+  const activeSid = (activeSession.get(chatId ? chatId.toString() : '')) || (sessions.keys().next().value);
+  const isAct = sess.id === activeSid;
   const rows  = [];
 
   // Tanlash
@@ -139,7 +191,8 @@ function buildSessionDetailKeyboard(sess, chatId) {
 
   // Tarix
   rows.push([
-    { text: '📜 So\'nggi buyruqlar', callback_data: 'sess_hist_' + sess.id },
+    { text: '📜 Tarixni ko\'rish', callback_data: 'sess_hist_' + sess.id },
+    { text: '🗑️ Tarixni tozalash', callback_data: 'sess_clear_hist_' + sess.id },
   ]);
 
   // Jarayon ishlayotgan bo'lsa
@@ -181,8 +234,10 @@ function buildModelText(currentModelId, currentEffortId) {
   const eff = getEffortInfo(currentEffortId);
 
   return (
-    `🤖 <b>Model:</b> ${m.emoji} ${escapeHtml(m.label)}\n` +
-    `⚡ <b>Tezlik:</b> ${eff.label}\n\n` +
+    `🧠 <b>Model tanlash</b>\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `🤖 <b>Hozir:</b> ${m.emoji} ${escapeHtml(m.label)}\n` +
+    `⚡ <b>Tezlik:</b> ${eff.emoji} ${escapeHtml(eff.label)}\n\n` +
     `Kerakli modelni tanlang:`
   );
 }
@@ -207,7 +262,9 @@ function buildEffortText(currentEffortId, currentModelId) {
   const m   = getModelInfo(currentModelId);
 
   return (
-    `⚡ <b>Tezlik:</b> ${eff.emoji} ${escapeHtml(eff.label)}\n` +
+    `⚡ <b>Tezlik tanlash</b>\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `⚡ <b>Hozir:</b> ${eff.emoji} ${escapeHtml(eff.label)}\n` +
     `🤖 <b>Model:</b> ${escapeHtml(m.label)}\n\n` +
     `Kerakli tezlikni tanlang:`
   );
@@ -258,6 +315,7 @@ module.exports = {
   truncate,
   buildProgressBar,
   MAIN_KEYBOARD,
+  getMainKeyboard,
   buildSessionsKeyboard,
   buildSessionsListText,
   buildSessionDetailText,

@@ -29,6 +29,13 @@ let currentDefaultCwd   = process.env.DEFAULT_CWD || null;
 let globalFiveHourLimit = parseInt(process.env.FIVE_HOUR_LIMIT || '250');
 let globalModel         = process.env.DEFAULT_MODEL  || 'gemini-3.8-flash';
 let globalEffort        = process.env.DEFAULT_EFFORT || 'high';
+let globalCountry       = (process.env.DEFAULT_COUNTRY || process.env.AGY_COUNTRY || process.env.VPN_COUNTRY || process.env.VPN_COUNTRY_CODE || 'us').trim();
+
+function normalizeCountry(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  return raw.replace(/^['"]|['"]$/g, '').replace(/\s+/g, ' ').trim();
+}
 
 function getDefaultCwd() {
   return currentDefaultCwd;
@@ -36,6 +43,20 @@ function getDefaultCwd() {
 
 function setDefaultCwd(newPath) {
   currentDefaultCwd = newPath;
+}
+
+function getDefaultCountry() {
+  return normalizeCountry(globalCountry) || 'us';
+}
+
+function setDefaultCountry(country) {
+  const normalized = normalizeCountry(country);
+  if (normalized) globalCountry = normalized;
+}
+
+function getEffectiveCountry() {
+  const envCountry = normalizeCountry(process.env.VPN_COUNTRY || process.env.VPN_COUNTRY_CODE || process.env.AGY_COUNTRY || process.env.COUNTRY || process.env.DEFAULT_COUNTRY);
+  return envCountry || getDefaultCountry();
 }
 
 function getGlobalLimit() {
@@ -62,6 +83,9 @@ function setGlobalEffort(effortId) {
   globalEffort = effortId;
 }
 
+const ENABLE_SYSTEM_BYPASS = process.env.ENABLE_SYSTEM_BYPASS === 'true';
+const SAFE_MODE            = process.env.SAFE_MODE !== 'false';
+
 function isAdmin(id) {
   return id && ADMIN_ID && id.toString() === ADMIN_ID.toString();
 }
@@ -73,8 +97,13 @@ module.exports = {
   LOCAL_API_PORT,
   AGY_BIN,
   DATA_DIR,
+  ENABLE_SYSTEM_BYPASS,
+  SAFE_MODE,
   getDefaultCwd,
   setDefaultCwd,
+  getDefaultCountry,
+  setDefaultCountry,
+  getEffectiveCountry,
   getGlobalLimit,
   setGlobalLimit,
   getGlobalModel,

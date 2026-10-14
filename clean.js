@@ -1,0 +1,1 @@
+const fs=require("fs");function clean(){console.log("[*] Loyiha tozalanmoqda...");["node_modules","dist"].forEach(d=>{if(fs.existsSync(d)){fs.rmSync(d,{recursive:true,force:true});console.log("[+] Ochirildi: "+d)}});console.log("[+] Tozalash tugadi.")}clean();

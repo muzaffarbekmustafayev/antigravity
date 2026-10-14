@@ -20,6 +20,7 @@ function saveSessions() {
         cwd:       s.cwd,
         model:     s.model,
         effort:    s.effort,
+        country:   s.country || config.getDefaultCountry(),
         history:   s.history.slice(-20),
         createdAt: s.createdAt,
         cmdCount:  s.cmdCount || s.history.length
@@ -45,6 +46,7 @@ function loadSessions() {
             cwd:       item.cwd  || config.getDefaultCwd() || process.cwd(),
             model:     item.model || config.getGlobalModel(),
             effort:    item.effort || config.getGlobalEffort(),
+            country:   item.country || config.getEffectiveCountry(),
             history:   item.history || [],
             proc:      null,
             isNewConv: true,
@@ -61,7 +63,7 @@ function loadSessions() {
 
 loadSessions();
 
-function createSession(name, customCwd, customModel, customEffort) {
+function createSession(name, customCwd, customModel, customEffort, customCountry) {
   sessionCounter++;
   const id = 's' + sessionCounter;
   const session = {
@@ -70,6 +72,7 @@ function createSession(name, customCwd, customModel, customEffort) {
     cwd:       customCwd || config.getDefaultCwd() || process.cwd(),
     model:     customModel || config.getGlobalModel(),
     effort:    customEffort || config.getGlobalEffort(),
+    country:   customCountry || config.getEffectiveCountry(),
     history:   [],
     proc:      null,
     isNewConv: true,
@@ -131,6 +134,33 @@ function closeSession(sid, chatId) {
   return name;
 }
 
+/**
+ * Sessiya buyruqlar tarixini to'liq tozalash
+ */
+function clearSessionHistory(sid) {
+  const sess = sessions.get(sid);
+  if (!sess) return false;
+  sess.history = [];
+  sess.cmdCount = 0;
+  saveSessions();
+  return true;
+}
+
+/**
+ * Sessiya tarixidan bitta elementni o'chirish
+ */
+function deleteHistoryItem(sid, index) {
+  const sess = sessions.get(sid);
+  if (!sess || !Array.isArray(sess.history)) return false;
+  if (index >= 0 && index < sess.history.length) {
+    sess.history.splice(index, 1);
+    sess.cmdCount = Math.max(0, sess.history.length);
+    saveSessions();
+    return true;
+  }
+  return false;
+}
+
 module.exports = {
   sessions,
   activeSession,
@@ -141,5 +171,7 @@ module.exports = {
   getActiveSession,
   setActiveSession,
   closeSession,
-  saveSessions
+  saveSessions,
+  clearSessionHistory,
+  deleteHistoryItem
 };

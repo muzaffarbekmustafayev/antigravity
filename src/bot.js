@@ -1,26 +1,22 @@
+/**
+ * 🚀 Antigravity Remote Terminal Bot
+ * Asosiy bot initsializatsiyasi va modullarni bog'lovchi markaz.
+ */
+
 const TelegramBot = require('node-telegram-bot-api');
-const { exec }    = require('child_process');
+<<<<<<< Updated upstream
+const { exec, execFile } = require('child_process');
 const fs          = require('fs');
 const path        = require('path');
+=======
+>>>>>>> Stashed changes
 const https       = require('https');
 const os          = require('os');
 const config      = require('./config');
-const { getModelInfo, getEffortInfo } = require('./models');
-const { recordRequest, get5HourStats } = require('./limits');
-const {
-  sessions,
-  activeSession,
-  renamePrompt,
-  setcwdPrompt,
-  createSession,
-  getSession,
-  getActiveSession,
-  setActiveSession,
-  closeSession,
-  saveSessions
-} = require('./sessions');
-const { saveChanges } = require('./git-saver');
-const ui = require('./ui');
+
+const { registerCommands }  = require('./handlers/commands');
+const { registerCallbacks } = require('./handlers/callbacks');
+const { registerMessages }  = require('./handlers/messages');
 
 function initBot() {
   // Windows lock holatida (Win + L) jarayon muzlab qolmasligi uchun ustuvorlikni oshiramiz
@@ -30,11 +26,24 @@ function initBot() {
     }
   } catch (_) {}
 
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.TELEGRAM_PROXY || null;
+
   // HTTPS Keep-Alive agent: Lock holatida socketlar uzilib ketishining oldini oladi
   const keepAliveAgent = new https.Agent({
     keepAlive: true,
     keepAliveMsecs: 10000,
+    timeout: 15000,
+    maxSockets: 10,
   });
+
+  const requestOptions = {
+    agent: keepAliveAgent,
+    timeout: 25000,
+  };
+
+  if (proxyUrl) {
+    requestOptions.proxy = proxyUrl;
+  }
 
   const bot = new TelegramBot(config.TOKEN, {
     polling: {
@@ -44,21 +53,26 @@ function initBot() {
         timeout: 20
       }
     },
-    request: {
-      agent: keepAliveAgent
-    }
+    request: requestOptions
   });
 
+  // Polling xatoliklarini qayta ishlash
+  let _last409Time = 0;
   bot.on('polling_error', (err) => {
     const errMsg = err ? (err.message || String(err)) : '';
 
     if (errMsg.includes('409 Conflict')) {
-      console.warn('⚠️ Diqqat: Boshqa bot instansiyasi ishga tushgan (409 Conflict). Faqat bitta bot instansiyasi ishlashi kerak.');
+      const now = Date.now();
+      if (now - _last409Time > 5000) {
+        _last409Time = now;
+        console.warn('⚠️ Diqqat: Telegram sessiyalari to\'qnashuvi (409 Conflict). Avtomatik tiklanmoqda...');
+      }
       return;
     }
 
     if (
       errMsg.includes('ECONNRESET') ||
+      errMsg.includes('ECONNABORTED') ||
       errMsg.includes('EFATAL') ||
       errMsg.includes('ETIMEDOUT') ||
       errMsg.includes('ESOCKETTIMEDOUT') ||
@@ -67,14 +81,24 @@ function initBot() {
       errMsg.includes('socket hang up') ||
       errMsg.includes('network')
     ) {
-      console.warn(`⚠️ Tarmoq uzilishi (${errMsg}), avtomatik davom etadi...`);
+      console.warn(`⚠️ Tarmoq/VPN almashinuvi (${errMsg}), soketlar yangilanmoqda...`);
+      try { keepAliveAgent.destroy(); } catch (_) {}
       return;
     }
 
     console.error('Telegram polling xatosi:', errMsg);
   });
 
-  // Watchdog taymeri: Faqat polling haqiqatan to'xtab qolgan bo'lsa qayta tiklaydi
+  // 🌐 SOTA VPN va IP o'zgarishini avtomatik kuzatuvchi
+  try {
+    const { startNetworkWatcher } = require('./network');
+    startNetworkWatcher(6000, (curr, prev) => {
+      console.log(`🔄 Tarmoq marshruti o'zgardi: ${curr.ip} (${curr.country}) [VPN: ${curr.isVpn ? 'HA' : 'YO\'Q'}]`);
+      try { keepAliveAgent.destroy(); } catch (_) {}
+    });
+  } catch (_) {}
+
+  // Watchdog taymeri: Polling to'xtab qolgan bo'lsa qayta tiklaydi
   setInterval(async () => {
     if (!bot.isPolling()) {
       console.log('🔄 Watchdog: Polling to\'xtab qolgan, qayta ishga tushirilmoqda...');
@@ -87,6 +111,7 @@ function initBot() {
     }
   }, 10000);
 
+<<<<<<< Updated upstream
   const sendHtml = (chatId, text, options) =>
     bot.sendMessage(chatId, text, Object.assign({ parse_mode: 'HTML' }, options || {}))
       .catch((err) => {
@@ -108,10 +133,12 @@ function initBot() {
     const sess   = getActiveSession(chatId);
     const mInfo  = getModelInfo(sess ? sess.model : config.getGlobalModel());
     const effInfo = getEffortInfo(sess ? sess.effort : config.getGlobalEffort());
+    const country = (sess && sess.country) || config.getEffectiveCountry();
 
     const welcome = (
       `🚀 <b>Antigravity Bot tayyor.</b>\n\n` +
       `🤖 <b>Model:</b> ${mInfo.emoji} ${ui.escapeHtml(mInfo.label)} (${effInfo.label})\n` +
+      `🌍 <b>Hudud yorlig'i:</b> <code>${ui.escapeHtml(country)}</code>\n` +
       `📁 <code>${ui.escapeHtml(ui.shortPath(config.getDefaultCwd() || 'projects'))}</code>\n` +
       `📊 <b>Limit:</b> ${config.getGlobalLimit()} ta / 5 soat\n\n` +
       `<i>Xabar yozsangiz, AGY agenti bajaradi.</i>`
@@ -153,6 +180,34 @@ function initBot() {
     sendHtml(chatId, ui.buildEffortText(curEff, curMod), {
       reply_markup: ui.buildEffortKeyboard(sess ? sess.id : null)
     });
+  });
+
+  // ─── VPN / region label ──────────────────────────────────────────────────
+  bot.onText(/^\/country(?:\s+(.+))?$/, (msg, match) => {
+    if (!config.isAdmin(msg.chat.id)) return;
+    const chatId = msg.chat.id.toString();
+    const sess = getActiveSession(chatId);
+    const arg = (match && match[1] ? match[1].trim() : '').trim();
+
+    if (!arg) {
+      const activeCountry = (sess && sess.country) || config.getEffectiveCountry();
+      return sendHtml(chatId,
+        `🌍 <b>Hudud yorlig'i:</b> <code>${ui.escapeHtml(activeCountry)}</code>\n\n` +
+        '<i>Yorliqni o\'zgartirish:</i> <code>/country &lt;hudud&gt;</code>\n' +
+        'Masalan: <code>/country us</code> yoki <code>/country Turkey</code>\n\n' +
+        'Bu faqat botdagi ko\'rsatkich. AGY tarmoq yo\'nalishini OS darajasidagi VPN yoki qo\'llab-quvvatlanadigan proxy belgilaydi; Google xizmatlari faqat rasmiy qo\'llab-quvvatlanadigan hududlarda ishlaydi.'
+      );
+    }
+
+    const nextCountry = arg;
+    config.setDefaultCountry(nextCountry);
+    if (sess) {
+      sess.country = nextCountry;
+      saveSessions();
+    }
+
+    sendHtml(chatId, `✅ <b>Hudud yorlig'i:</b> <code>${ui.escapeHtml(nextCountry)}</code> ga o\'zgartirildi.\n\n` +
+      '<i>Bu qiymat AGY’ga geo-routing flag sifatida yuborilmaydi. Tarmoqni OS darajasidagi VPN yoki AGY qo\'llaydigan proxy sozlaydi.</i>');
   });
 
   // ─── 5-Soatlik Limit ────────────────────────────────────────────────────────
@@ -247,6 +302,7 @@ function initBot() {
       `⚙️ <b>Sozlamalar:</b>\n\n` +
       `📁 <code>${ui.escapeHtml(ui.shortPath(config.getDefaultCwd() || 'projects'))}</code>\n` +
       `🤖 ${ui.escapeHtml(config.getGlobalModel())} (${ui.escapeHtml(config.getGlobalEffort())})\n` +
+      `🌍 Hudud yorlig'i: <code>${ui.escapeHtml((sess && sess.country) || config.getEffectiveCountry())}</code>\n` +
       `⏱️ Limit: ${config.getGlobalLimit()} ta / 5h`
     );
 
@@ -266,6 +322,20 @@ function initBot() {
     });
   });
 
+  function resolveWithinBaseDir(baseDir, targetPath) {
+    const base = path.resolve(baseDir);
+    const resolved = path.isAbsolute(targetPath)
+      ? targetPath
+      : path.resolve(base, targetPath);
+
+    const relative = path.relative(base, resolved);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      throw new Error('Fayl ishlaydigan papka tashqarisida bo\'lmaydi.');
+    }
+
+    return resolved;
+  }
+
   // ─── Fayl olish (/get) ──────────────────────────────────────────────────────
   bot.onText(/^\/get(.*)$|^📥 Fayl olish$/, async (msg, match) => {
     if (!config.isAdmin(msg.chat.id)) return;
@@ -278,7 +348,13 @@ function initBot() {
 
     const sess     = getActiveSession(chatId);
     const baseCwd  = (sess && sess.cwd) || config.getDefaultCwd() || process.cwd();
-    const filePath = path.isAbsolute(arg) ? arg : path.resolve(baseCwd, arg);
+
+    let filePath;
+    try {
+      filePath = resolveWithinBaseDir(baseCwd, arg);
+    } catch (e) {
+      return sendHtml(chatId, `❌ ${ui.escapeHtml(e.message)}`);
+    }
 
     if (!fs.existsSync(filePath))
       return sendHtml(chatId, `❌ Fayl topilmadi:\n<code>${ui.escapeHtml(filePath)}</code>`);
@@ -306,6 +382,7 @@ function initBot() {
       '❓ <b>Buyruqlar:</b>\n\n' +
       '• <code>/model</code> — AI model tanlash\n' +
       '• <code>/effort</code> — Fikrlash tezligi\n' +
+      '• <code>/country</code> — VPN/hudud ko\'rsatish yorlig\'i\n' +
       '• <code>/limit</code> — 5-soatlik limit\n' +
       '• <code>/save</code> — Git ga saqlash\n' +
       '• <code>/sessions</code> — Sessiyalar\n' +
@@ -395,7 +472,7 @@ function initBot() {
     if (!text || text.startsWith('/')) return;
 
     const knownButtons = [
-      '📂 Sessiyalar', '🤖 Model', '⚡ Tezlik',
+      '📂 Sessiyalar', '🤖 Model', '⚡ Tezlik', '🌍 Country',
       '📊 5-Soatlik Limit', '💾 Saqlash', '📍 Papka (pwd)',
       '📁 Fayllar (ls)', '📜 Tarix', '💻 Tizim',
       '🛑 To\'xtatish', '⚙️ Sozlamalar', '❓ Yordam', '📥 Fayl olish'
@@ -458,27 +535,28 @@ function initBot() {
     const mInfo         = getModelInfo(currentModel);
     const effInfo       = getEffortInfo(currentEffort);
 
-    let modelArgs = `--model "${currentModel}"`;
-    if (mInfo.supportsEffort) {
-      modelArgs += ` --effort ${currentEffort}`;
-    }
-
     const agyContinue = !sess.isNewConv;
     sess.isNewConv    = false;
 
-    const safeText = text.replace(/\\/g, '/').replace(/"/g, '\\"');
-    const safeCwd  = sess.cwd.replace(/\\/g, '/');
-
-    const execCommand = (
-      `${config.AGY_BIN} ${agyContinue ? '-c ' : ''}${modelArgs} ` +
-      `--dangerously-skip-permissions --mode accept-edits --print-timeout 15m ` +
-      `-p "MUHIM: Faqat AMAL qil. Reja tuzma. Ishchi jild: ${safeCwd}. ` +
-      `TELEGRAM API: curl.exe -s \\"http://127.0.0.1:${config.LOCAL_API_PORT}/send-file\\" ` +
-      `-G --data-urlencode \\"file=TO'LIQ_YO'L\\". ` +
-      `Xabar: curl.exe -s \\"http://127.0.0.1:${config.LOCAL_API_PORT}/send-msg\\" ` +
-      `-G --data-urlencode \\"text=XABAR\\". ` +
-      `Foydalanuvchi: ${safeText}\"`
-    );
+    const safeText = text.replace(/\\/g, '/');
+    const safeCwd  = path.resolve(sess.cwd).replace(/\\/g, '/');
+    const agyCommand = config.AGY_BIN.replace(/^['\"]|['\"]$/g, '');
+    const agyArgs = [
+      ...(agyContinue ? ['-c'] : []),
+      '--model', currentModel,
+      ...(mInfo.supportsEffort ? ['--effort', currentEffort] : []),
+      '--dangerously-skip-permissions',
+      '--mode', 'accept-edits',
+      '--print-timeout', '15m',
+      '-p', (
+        `MUHIM: Faqat AMAL qil. Reja tuzma. Ishchi jild: ${safeCwd}. ` +
+        `TELEGRAM API: curl.exe -s \"http://127.0.0.1:${config.LOCAL_API_PORT}/send-file\" ` +
+        `-G --data-urlencode \"file=TO'LIQ_YO'L\". ` +
+        `Xabar: curl.exe -s \"http://127.0.0.1:${config.LOCAL_API_PORT}/send-msg\" ` +
+        `-G --data-urlencode \"text=XABAR\". ` +
+        `Foydalanuvchi: ${safeText}`
+      )
+    ];
 
     const modelBadge = `${mInfo.emoji} ${mInfo.label} [${effInfo.emoji} ${effInfo.label}]`;
     const statusText = (
@@ -510,10 +588,12 @@ function initBot() {
         bot.sendChatAction(chatId, 'typing').catch(() => {});
       }, 4500);
 
-      const child = exec(execCommand, {
+      const child = execFile(agyCommand, agyArgs, {
         cwd: sess.cwd,
         timeout: 900000,
-        detached: true
+        detached: true,
+        windowsHide: true,
+        env: process.env
       }, (error, stdout, stderr) => {
         clearInterval(typingInterval);
         sess.proc = null;
@@ -852,6 +932,12 @@ function initBot() {
       return sendHtml(chatId, '⏱️ 5-soatlik limitni o\'zgartirish uchun: <code>/setlimit &lt;soni&gt;</code> yuboring (masalan: <code>/setlimit 200</code>).');
     }
   });
+=======
+  // Modullarni ro'yxatdan o'tkazish
+  registerCommands(bot);
+  registerCallbacks(bot);
+  registerMessages(bot);
+>>>>>>> Stashed changes
 
   return bot;
 }
