@@ -1,39 +1,6 @@
 /**
- * Telegram yordamchi funksiyalari va matn tozalash utilitalari
+ * Antigravity umumiy yordamchi utilitalari
  */
-
-/**
- * Matndagi HTML maxsus belgilarini xavfsiz qilish
- */
-function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-/**
- * Xabarni HTML formatida xavfsiz yuborish (xato bo'lsa teglarsiz qayta urinadi)
- */
-function sendHtml(bot, chatId, text, options) {
-  return bot.sendMessage(chatId, text, Object.assign({ parse_mode: 'HTML' }, options || {}))
-    .catch((err) => {
-      console.error('sendHtml xatosi:', err.message);
-      const clean = String(text || '').replace(/<[^>]*>/g, '');
-      return bot.sendMessage(chatId, clean, options || {});
-    });
-}
-
-/**
- * Mavjud xabarni HTML formatida xavfsiz tahrirlash
- */
-function editHtml(bot, chatId, msgId, text, options) {
-  return bot.editMessageText(text, Object.assign({
-    chat_id: chatId,
-    message_id: msgId,
-    parse_mode: 'HTML'
-  }, options || {})).catch(() => {});
-}
 
 /**
  * Windows terminali yoki kodirovka buzilishi sababli paydo bo'lgan '??' belgilarini tozalash
@@ -87,9 +54,6 @@ function getLanIp() {
 }
 
 module.exports = {
-  escapeHtml,
-  sendHtml,
-  editHtml,
   cleanEncodingArtifacts,
   filterDiagnosticStderr,
   getLanIp

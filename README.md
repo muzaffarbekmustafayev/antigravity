@@ -1,222 +1,175 @@
 <div align="center">
 
-# 🚀 Antigravity Remote Terminal Bot
+# 🚀 Antigravity Bypass & Regional Unlocker
 
-**Manage your computer's terminal & Google Antigravity (AGY) sessions remotely and securely via Telegram.**
+**Google Antigravity (AGY), Antigravity 2.0 va Antigravity IDE uchun mintaqaviy cheklovlarni olib tashlash, binar patch va aqlli tarmoq moslashtiruvchisi.**
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
-[![Telegram Bot API](https://img.shields.io/badge/Telegram-Bot%20API-blue.svg)](https://core.telegram.org/bots/api)
-[![Google Antigravity](https://img.shields.io/badge/AGY-CLI%20Enabled-orange.svg)](https://antigravity.google)
+[![Google Antigravity](https://img.shields.io/badge/Antigravity-Unlocked-orange.svg)](https://antigravity.google)
+[![VPN Friendly](https://img.shields.io/badge/VPN-SOTA%20Compatible-blue.svg)](https://github.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
 ### 🌐 Select Language / Tilni tanlang / Выберите язык
-[**🇺🇸 English**](#-english) | [**🇺🇿 O'zbekcha**](#-ozbekcha) | [**🇷🇺 Русский**](#-русский)
+[**🇺🇿 O'zbekcha**](#-ozbekcha) | [**🇺🇸 English**](#-english) | [**🇷🇺 Русский**](#-русский)
 
 ---
 
 </div>
 
-<a name="english"></a>
-## 🇺🇸 English
-
-### 🌟 Overview
-**Antigravity Remote Terminal Bot** is a secure, multi-session Telegram bridge that connects your Telegram chat directly to your local computer's terminal and Google Antigravity (AGY) coding agent. It allows developers to supervise coding tasks, execute commands, switch AI reasoning models and speeds, monitor 5-hour rolling API usage limits, and send/receive files remotely.
-
-### ✨ Key Features
-- **🤖 Official Antigravity AI Models:** Switch seamlessly between latest models (`Gemini 3.8 Flash`, `Gemini 3.7 Flash`, `Gemini 3.6 Flash`, `Gemini 3.1 Pro`, `Claude Sonnet 4.6`, `Claude Opus 4.6`, `GPT-OSS 120B`).
-- **⚡ Reasoning Effort & Speed Control:** Toggle between `Low (Fast / Low compute)`, `Medium (Balanced)`, and `High (Deep reasoning / Highest quality)`.
-- **⏱️ 5-Hour Rolling Limit Tracker (`/limit`):** Real-time monitoring of your 5-hour quota window, countdown timer until the earliest slot recovers, and breakdown per model and effort tier.
-- **📂 Interactive Session Management (`/sessions`):** Interactive session cards with directory controls, model/effort switcher, conversation reset, rename, and process kill.
-- **📤 Telegram File Bridge (`/get` & Local API):** Download files from your machine directly to Telegram, or let AGY send generated files via local HTTP webhook.
-- **🔒 Admin-Only Security:** Access restricted strictly to your `ADMIN_CHAT_ID`. All unauthorized users are immediately rejected.
-- **🛑 Real-time Process Control:** Kill long-running or stuck processes anytime with inline buttons.
-
----
-
-### 🚀 Quick Start & Installation
-
-#### 1. Prerequisites
-- [Node.js](https://nodejs.org/) (v18 or newer)
-- [Antigravity CLI](https://antigravity.google) (`agy`) installed on your system (auto-detected)
-
-#### 2. Setup Bot
-1. Open [@BotFather](https://t.me/BotFather) in Telegram and create a new bot to get your `BOT_TOKEN`.
-2. Get your numeric Telegram user ID from [@userinfobot](https://t.me/userinfobot) for `ADMIN_CHAT_ID`.
-
-#### 3. Clone & Configure
-```bash
-git clone https://github.com/your-username/antigravity-remote-terminal.git
-cd antigravity-remote-terminal
-npm install
-cp .env.example .env
-```
-
-Configure `.env`:
-```env
-BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz123456789
-ADMIN_CHAT_ID=123456789
-DEFAULT_CWD=C:\Users\username\Desktop\my-project
-DEFAULT_MODEL=gemini-3.8-flash
-DEFAULT_EFFORT=high
-# Display label only; it does not select or spoof AGY's network region.
-DEFAULT_COUNTRY=us
-# Optional proxy settings; use only if supported by your AGY CLI version.
-# HTTPS_PROXY=http://127.0.0.1:8080
-# HTTP_PROXY=http://127.0.0.1:8080
-FIVE_HOUR_LIMIT=250
-LOCAL_API_PORT=7799
-```
-
-AGY uses the host's network route. To route it through a VPN, use a system-wide VPN connection (a browser-only VPN extension does not affect the CLI), or configure a proxy supported by your AGY CLI. The bot passes its environment through to AGY. A `/country` value and `VPN_COUNTRY` are display labels only; they do not change network routing or bypass Google's regional availability, account, or service requirements. Gemini model availability remains subject to Google's supported regions.
-
-#### 4. Run the Bot
-```bash
-npm start
-```
-
----
-
-### 🎮 Available Commands
-
-| Command | Description |
-| :--- | :--- |
-| `/start` | Launch bot, display system status, and show persistent keyboard |
-| `/sessions` | View and manage interactive session cards |
-| `/model` | Open AI Model selection keyboard |
-| `/effort` or `/speed` | Select model reasoning speed (Low, Medium, High) |
-| `/country` | Set the displayed VPN/region label; network routing is controlled by OS VPN/proxy |
-| `/limit` | View 5-hour rolling limit progress, next reset timer, and statistics |
-| `/newsess <name>` | Create and activate a new session |
-| `/switch <id>` | Switch to a specific session by ID |
-| `/setcwd <path>` | View or update working directory |
-| `/get <filepath>`| Download a file from host machine to Telegram |
-| `/pwd` | Print working directory of active session |
-| `/ls` | List directory contents of active session |
-| `/history` | View the last 20 commands executed in active session |
-| `/kill` | Terminate active child process in current session |
-| `/sys` | Display host CPU, RAM, OS, and AGY binary diagnostics |
-| `/help` | Show command cheat sheet |
-
----
-
-<br/>
-
 <a name="ozbekcha"></a>
 ## 🇺🇿 O'zbekcha
 
 ### 🌟 Umumiy Ma'lumot
-**Antigravity Remote Terminal Bot** — bu Telegram orqali shaxsiy kompyuteringiz terminali va eng yangi Google Antigravity (AGY) agentini masofadan to'liq xavfsiz boshqarish imkonini beruvchi tizimdir. Loyihalaringizni istalgan joydan turib boshqaring, model va tezlikni tanlang, 5 soatlik limitni kuzatib boring.
+**Antigravity Bypass & Regional Unlocker** — bu Google Antigravity (AGY), Antigravity 2.0 va Antigravity IDE vositalarini mintaqaviy cheklovlar (`User location is not supported`, `ineligible`, `geo-block`) bo'lgan hududlarda to'siqsiz ishlatish uchun yaratilgan kuchli yechimdir.
+
+Dastur kompyuterdagi barcha mavjud o'rnatilmalarni avtomatik qidirib topadi, **"Sizda borlari"** ro'yxatini chiqaradi va xohlagan o'rnatilmani raqami bo'yicha alohida yoki barchasini birvarakayiga patch qilish imkonini beradi.
 
 ### ✨ Asosiy Imkoniyatlar
-- **🤖 Yangilangan Google Antigravity Modellari:**
-  - `Gemini 3.8 Flash` — Eng yangi, o'ta tezkor va aqlli (Asosiy / Tavsiya etiladi)
-  - `Gemini 3.7 Flash` — Tez va ko'p qirrali
-  - `Gemini 3.6 Flash` — Oldingi avlod, yengil skriptlar
-  - `Gemini 3.1 Pro` — Murakkab arxitektura va kodlash
-  - `Claude Sonnet 4.6` — Anthropic Thinking, chuqur tahlil
-  - `Claude Opus 4.6` — Eng kuchli Anthropic modeli
-  - `GPT-OSS 120B` — Ochiq manbali model
-- **⚡ Ishlash Tezligini Tanlash (Reasoning Effort):**
-  - ⚡ `Low (Tezkor)` — Minimal fikrlash, tezkor javob, kam token sarfi
-  - ⚖️ `Medium (O'rtacha)` — Standart muvozanatli tezlik
-  - 🧠 `High (Chuqur)` — Maksimal tahlil va yuqori sifatli kodlash
-- **⏱️ Aniq 5-Soatlik Limit Tizimi (`/limit`):**
-  - 5 soatlik sirg'aluvchi (rolling window) limit statusi
-  - Ishlatilgan va qolgan so'rovlar soni (`X / 250 ta`)
-  - Vizual yuklanish progress-bari (`[████░░░░░░] 35%`)
-  - Keyingi so'rov tiklanish vaqti taymeri (masalan: `42 daqiqadan so'ng 22:15 da`)
-  - Modellar va tezlik darajalari bo'yicha sarf statistikasi
-- **📂 Kuchaytirilgan Interaktiv Sessiyalar (`/sessions`):**
-  - Har bir sessiya uchun alohida karta: model, tezlik, papka, buyruqlar soni
-  - Bitta tugma bilan sessiyaga o'tish, nomini o'zgartirish, suhbatni tozalash (`reset`), papkani sozlash
-- **📤 Fayl Yuklab Olish (`/get`):** Kompyuterdagi fayllarni to'g'ridan-to'g'ri Telegramga yuklab olish.
-- **🔒 100% Xavfsiz:** Faqat `.env` dagi `ADMIN_CHAT_ID` foydalanuvchisi boshqara oladi.
+- **🔍 Avtomatik O'rnatilmalarni Qidirish (Discovery):**
+  - `ANTIGRAVITY IDE` (`main.js` + `language_server_windows_x64.exe`)
+  - `ANTIGRAVITY 2.0` (`language_server.exe`)
+  - `ANTIGRAVITY CLI` (`agy.exe`)
+  - `AGY BIN (.gemini)` (`agy.exe`)
+  - `ANTIGRAVITY VS CODE EXTENSION` (kengaytmalar)
+- **🔢 1 dan Boshlanuvchi "Sizda borlari" Ro'yxati:**
+  - Kompyuterda topilgan har bir o'rnatilma raqamlanadi (1, 2, 3...)
+  - Aniq holat: Target fayl yo'li, patch holati (`[PATCHED ✓]` / `[NOT PATCHED ✗]`), fayl hajmi va versiyasi ko'rsatiladi.
+- **⚡ Tanlov Asosida Patch Qilish:**
+  - Istalgan o'rnatilma raqamini kiritib, faqat shuning o'zini patch qilish.
+  - Yoki `[A]` bosib barchasini birdaniga patch qilish.
+- **🛡️ VPN Bilan Mukammal Hamohanglik (SOTA VPN va boshqalar):**
+  - VPN yoqilgan bo'lsa, tarmoq avtomatik aniqlanadi va provayderga majburiy bog'lanishlar olib tashlanadi.
+  - VPN o'chiq bo'lsa, xavfsiz SmartDNS bypass marshruti ishga tushadi.
+- **↩️ Asl Holatiga Qaytarish (Restore / Unpatch):**
+  - Barcha o'zgartirishlarni istalgan paytda bir tugma bilan bekor qilish va zaxira nusxalarini tiklash.
+- **🛡️ Watchdog (Avto-nazorat):**
+  - Google Antigravity avtomatik yangilanganida, fon rejimida uni darhol qayta patch qilish.
 
 ---
 
 ### 🚀 O'rnatish va Ishga Tushirish
 
 #### 1. Talablar
-- Node.js (v18+)
-- Google Antigravity CLI (`agy`)
+- [Node.js](https://nodejs.org/) (v18 yoki undan yuqori)
+- Windows 10 / 11
 
-#### 2. Sozlash
+#### 2. O'rnatish
 ```bash
-git clone https://github.com/your-username/antigravity-remote-terminal.git
-cd antigravity-remote-terminal
+git clone https://github.com/muzaffarbekmustafayev/antigravity.git
+cd antigravity
 npm install
-cp .env.example .env
 ```
-
-`.env` fayli namunasi:
-```env
-BOT_TOKEN=8752300123:AAF1F9Q1cedDyhEj4k0lWXsKhx9wIX5Hvx4
-ADMIN_CHAT_ID=112436605
-DEFAULT_CWD=C:\Users\muzaf\Desktop\mzfck\projects
-DEFAULT_MODEL=gemini-3.8-flash
-DEFAULT_EFFORT=high
-# Faqat ko'rsatish yorlig'i; AGY tarmoq hududini tanlamaydi.
-DEFAULT_COUNTRY=us
-# Faqat AGY CLI qo'llasa foydalaning.
-# HTTPS_PROXY=http://127.0.0.1:8080
-# HTTP_PROXY=http://127.0.0.1:8080
-FIVE_HOUR_LIMIT=250
-LOCAL_API_PORT=7799
-```
-
-AGY kompyuterning tarmoq yo'nalishidan foydalanadi. Uni VPN orqali o'tkazish uchun tizim bo'ylab ishlaydigan VPN ulang (faqat brauzer kengaytmasi CLI trafigini yo'naltirmaydi) yoki AGY CLI qo'llaydigan proxy sozlang. Bot muhit o'zgaruvchilarini AGY jarayoniga uzatadi. `/country` va `VPN_COUNTRY` faqat ko'rsatish yorlig'i; ular tarmoqni o'zgartirmaydi va Google'ning hududiy cheklovlarini chetlab o'tmaydi. Gemini modellari Google qo'llab-quvvatlaydigan hududlarda mavjud bo'lishi mumkin.
 
 #### 3. Ishga Tushirish
 ```bash
 npm start
 ```
+Ishga tushirilganda tizim avtomatik skanerlash o'tkazadi va quyidagi qulay menyuni ko'rsatadi:
+
+```text
+] Searching for installations...
+  ─ ANTIGRAVITY IDE ───────────────────────────────
+      Target:  C:\Users\...\Antigravity IDE\resources\app\out\main.js
+      Status:  found
+      Patch:   already patched
+      Version: 2.5.5
+      Size:    14.3 MB
+
+  ─ ANTIGRAVITY 2.0 ───────────────────────────────
+      Target:  C:\Users\...\antigravity\resources\bin\language_server.exe
+      Status:  found
+      Patch:   already patched
+      Version: 2.23.1
+      Size:    161.3 MB
+
+  ─ ANTIGRAVITY CLI ───────────────────────────────
+      Target:  C:\Users\...\AppData\Local\agy\bin\agy.exe
+      Status:  found
+      Patch:   already patched
+      Version: 1.3.5
+      Size:    184.9 MB
+
+  ─ AGY BIN (.gemini) ─────────────────────────────
+      Target:  C:\Users\...\.gemini\bin\agy.exe
+      Status:  found
+      Patch:   already patched
+      Version: 1.3.3
+      Size:    184.2 MB
+
+  ─ ANTIGRAVITY VS CODE EXTENSION ─────────────────
+      Target:  Not found
+      Status:  not found
+
+════════════════════════════════════════════════════════════
+📦 SIZDA BORLARI (Mavjud o'rnatilmalar):
+════════════════════════════════════════════════════════════
+
+  [1] ANTIGRAVITY IDE  [PATCHED ✓]
+  [2] ANTIGRAVITY 2.0  [PATCHED ✓]
+  [3] ANTIGRAVITY CLI  [PATCHED ✓]
+  [4] AGY BIN (.gemini)  [PATCHED ✓]
+
+────────────────────────────────────────────────────────────
+⚡ Buyruqlar:
+  [1 - 4]  Tanlangan o'rnatilmani patch qilish
+  [A]      BARCHASINI birvarakayiga patch qilish (Tavsiya etiladi)
+  [R]      Asliga qaytarish (Restore / Unpatch)
+  [S]      Status & Diagnostika (Tarmoq, DNS, NRPT)
+  [W]      Watchdog avto-patch (fon rejimida)
+  [Q]      Chiqish
+────────────────────────────────────────────────────────────
+Tanlovingizni kiriting [1-4, A, R, S, W, Q]: 
+```
 
 ---
 
-### 🎮 Bot Buyruqlari
+### 🛠️ Qo'shimcha Buyruqlar
 
-| Buyruq | Tavsif |
+| Buyruq | Vazifasi |
 | :--- | :--- |
-| `/start` | Botni ishga tushirish, holat va doimiy qulay menyu |
-| `/sessions` | Interaktiv sessiyalar ro'yxati va boshqaruv paneli |
-| `/model` | AI modelini tanlash oynasi |
-| `/effort` yoki `/speed` | Model ishlash tezligini tanlash (Low, Medium, High) |
-| `/country` | VPN/hudud yorlig'ini ko'rsatish; haqiqiy yo'nalish OS VPN/proxy orqali |
-| `/limit` | Aniq 5-soatlik limit va tiklanish taymeri |
-| `/newsess <nom>` | Yangi sessiya ochish |
-| `/switch <id>` | Belgilangan sessiyaga o'tish |
-| `/setcwd <yo'l>` | Ishchi papkani ko'rish yoki yangilash |
-| `/get <fayl>` | Kompyuterdan faylni Telegramga yuklab olish |
-| `/pwd` | Faol sessiyaning joriy papkasi |
-| `/ls` | Faol sessiya papkasidagi fayllar |
-| `/history` | So'nggi 20 ta buyruq |
-| `/kill` | Ishlayotgan jarayonni to'xtatish |
-| `/sys` | Server tizim parametrlari (CPU, RAM, OS, AGY) |
-| `/help` | Bot qo'llanmasi |
+| `npm start` | Interaktiv boshqaruv menyusini ochish |
+| `npm run patch` | Barcha o'rnatilmalarni to'g'ridan-to'g'ri patch qilish |
+| `npm run status` | Tarmoq, VPN va fayllar holatini tekshirish |
+| `npm run restore` | Barcha patchlarni bekor qilish va asl nusxani tiklash |
+| `npm run clean:hosts` | Windows NRPT va hosts qoidalarini tozalash |
 
 ---
 
-<br/>
+<a name="english"></a>
+## 🇺🇸 English
+
+### 🌟 Overview
+**Antigravity Bypass & Regional Unlocker** is a dedicated tool for bypassing geographic restrictions (`User location is not supported`, `ineligible`) across Google Antigravity (AGY), Antigravity 2.0, and Antigravity IDE.
+
+It automatically discovers all installations on your system, displays a clean numbered list starting from 1 ("Available on your machine"), and allows you to selectively patch individual targets or unlock all of them at once.
+
+### ✨ Features
+- **Automatic Target Discovery:** Detects IDE, Antigravity 2.0, CLI, and extensions.
+- **Numbered Selection (1 to N):** Choose any specific installation to patch or revert.
+- **VPN Compatible (SOTA VPN):** Automatically respects VPN routes without interfering or leaking physical ISP traffic.
+- **Instant Restore:** Easily revert any or all binaries to original backups.
+- **Watchdog Mode:** Keeps binaries patched even across background Google updates.
+
+---
 
 <a name="русский"></a>
 ## 🇷🇺 Русский
 
 ### 🌟 Описание
-**Antigravity Remote Terminal Bot** — мощный Telegram-мост для управления терминалом и новейшим AI-агентом Google Antigravity (AGY).
+**Antigravity Bypass & Regional Unlocker** — инструмент для обхода региональных ограничений (`User location is not supported`, `ineligible`) для Google Antigravity (AGY), Antigravity 2.0 и Antigravity IDE.
+
+Автоматически находит все установленные версии на компьютере, выводит пронумерованный список от 1 («То, что у вас есть») и позволяет пропатчить как конкретную установку, так и все сразу.
 
 ### ✨ Возможности
-- **🤖 Актуальные модели Google Antigravity:** `Gemini 3.8 Flash (High/Med/Low)`, `Gemini 3.7 Flash`, `Gemini 3.6 Flash`, `Gemini 3.1 Pro`, `Claude Sonnet 4.6`, `Claude Opus 4.6`, `GPT-OSS 120B`.
-- **⚡ Скорость рассуждений (Effort):** Выбор между `Low` (быстро/экономно), `Medium` (баланс) и `High` (глубокий анализ).
-- **⏱️ Точный 5-часовой лимит (`/limit`):** Плавающее 5-часовое окно запросов, таймер восстановления слотов и подробная статистика.
-- **📂 Интерактивные мультисессии (`/sessions`):** Детальные карточки управления каждой сессией.
-- **📤 Передача файлов (`/get`):** Выгрузка файлов прямо в Telegram.
+- **Автоматический поиск:** Сканирует Antigravity IDE, Antigravity 2.0, CLI (`agy.exe`) и плагины.
+- **Выбор по номеру [1 - N]:** Патчинг выбранного компонента или всех сразу `[A]`.
+- **Полная совместимость с VPN (SOTA VPN):** Автоматически использует туннель VPN без конфликтов NRPT.
+- **Откат к оригиналу [R]:** Восстановление оригинальных файлов из резервных копий в один клик.
 
 ---
 
 <div align="center">
-
-Made with ❤️ for effortless remote AI programming with Google Antigravity.
-
+Antigravity Bypass & Unlocker • Built for uninterrupted AI developer workflows.
 </div>

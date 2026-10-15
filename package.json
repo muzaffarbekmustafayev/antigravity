@@ -1,20 +1,21 @@
 {
-  "name": "antigravity-remote-terminal",
+  "name": "antigravity-bypass",
   "version": "2.0.0",
-  "description": "Antigravity bypass + Telegram bot for remote terminal execution",
-  "main": "server.js",
+  "description": "Google Antigravity regional bypass, binary patcher, and DNS unlocker",
+  "main": "patcher.js",
+  "bin": {
+    "antigravity-bypass": "cli.js"
+  },
   "scripts": {
     "start": "node cli.js",
-    "server": "node server.js",
-    "dev": "node server.js",
-    "build": "node -c server.js cli.js src/bot.js src/webhook.js src/dashboard.js src/config.js src/limits.js src/models.js src/network.js src/runner.js src/sessions.js src/tunnel.js src/ui.js src/utils.js",
-    "patch": "node cli.js patch",
-    "background": "wscript run-background.vbs",
-    "stop": "stop-bot.bat"
+    "patch": "node patcher.js",
+    "status": "node cli.js status",
+    "restore": "node cli.js restore",
+    "clean": "node clean.js",
+    "clean:hosts": "clean-hosts.bat",
+    "build": "node -c cli.js patcher.js src/bypass/index.js src/bypass/patch.js src/bypass/dns-bypass.js src/bypass/watchdog.js src/network.js src/config.js src/utils.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
-    "node-telegram-bot-api": "^0.66.0",
-    "nodemon": "^3.1.14"
+    "dotenv": "^16.4.5"
   }
 }

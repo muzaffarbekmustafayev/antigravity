@@ -288,12 +288,8 @@ function queryUdpDns(hostname, serverIp, timeoutMs = 2000, localIfName = null) {
       finish(parseDnsARecords(msg));
     });
 
-    // Bind to the ISP interface when a VPN is up (mirrors IP_UNICAST_IF)
-    const bindAddr = localIfName ? getIfaceIp(localIfName) : null;
-    sock.bind(bindAddr ? { address: bindAddr } : undefined, () => {
-      sock.send(packet, 0, packet.length, 53, serverIp, (err) => {
-        if (err) finish([]);
-      });
+    sock.send(packet, 0, packet.length, 53, serverIp, (err) => {
+      if (err) finish([]);
     });
   });
 }
@@ -685,11 +681,8 @@ function forwardUdp(queryBuf, serverIp, port = 53, localIfName = null, timeoutMs
         finish(msg);
       }
     });
-    const bindAddr = localIfName ? getIfaceIp(localIfName) : null;
-    sock.bind(bindAddr ? { address: bindAddr } : undefined, () => {
-      sock.send(queryBuf, 0, queryBuf.length, port, serverIp, err => {
-        if (err) finish(null);
-      });
+    sock.send(queryBuf, 0, queryBuf.length, port, serverIp, err => {
+      if (err) finish(null);
     });
   });
 }
@@ -808,12 +801,30 @@ async function setup(options = {}) {
     return { ok: false, error: 'DNS NRPT bypass is Windows-only. Linux: use hosts-pin fallback.' };
   }
 
-  // 1. Detect ISP interface
+  // 1. Detect ISP interface and VPN state
   const egress = detectEgress();
   const vpnActive = egress?.vpnActive ?? false;
   const ifName    = egress?.ifName    ?? null;
 
-  // 2. Start relay
+  // AGAR VPN FAOL BO'LSA (masalan SOTA VPN):
+  // VPN allaqachon chet el serveriga ulangan. NRPT qoidalari yoki loopback relay o'rnatish
+  // VPN bilan to'qnashuv keltirib chiqaradi va internetni qulflaydi.
+  // Shuning uchun VPN bor paytda NRPT va relay o'rnatilmaydi, mavjudlari esa tozalab tashlanadi!
+  if (vpnActive) {
+    try { removeNrptRules(); } catch (_) {}
+    try { stopRelay(); } catch (_) {}
+    try { removeHostsEntries(); } catch (_) {}
+    flushDnsCache();
+    return {
+      ok: true,
+      method: 'vpn-native',
+      vpnActive: true,
+      ifName,
+      note: 'VPN faol: DNS va marshrutlash VPN orqali to\'g\'ridan-to\'g\'ri ishlamoqda (to\'qnashuvsiz).'
+    };
+  }
+
+  // 2. Start relay (faqat VPN yo'q bo'lgan mahalliy internet uchun)
   let relayActive = false;
   try {
     await startRelay(egress);

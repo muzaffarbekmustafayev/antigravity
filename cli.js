@@ -1,20 +1,21 @@
 #!/usr/bin/env node
 /**
- * cli.js — Antigravity interaktiv boshqaruv paneli (v2)
+ * cli.js — Antigravity Bypass & Regional Unlocker (v2.0)
  *
- * npm start qilganda 3 ta tanlov chiqadi:
- *   1. Patch — Antigravity'ni barcha hududlarda ishlaydigan qilish
- *   2. Telegram Bot — Masofaviy terminal botni ishga tushirish
- *   3. Chiqish — Terminalni yopish
+ * Google Antigravity (AGY) va Antigravity IDE uchun mintaqaviy cheklovlarni
+ * olib tashlash, binar patch qo'llash va DNS marshrutlashni boshqarish vositasi.
  */
 
 'use strict';
 
 const readline = require('readline');
-const { execSync, spawn } = require('child_process');
-const fs   = require('fs');
-const path = require('path');
-const os   = require('os');
+const fs       = require('fs');
+const path     = require('path');
+const os       = require('os');
+const bypass   = require('./src/bypass');
+const patch    = require('./src/bypass/patch');
+const dnsBypass = require('./src/bypass/dns-bypass');
+const { getNetworkStatus } = require('./src/network');
 
 // ─── ANSI ranglar ──────────────────────────────────────────────────────────────
 const C = {
@@ -28,17 +29,19 @@ const C = {
   blue:    '\x1b[34m',
   magenta: '\x1b[35m',
   white:   '\x1b[97m',
-  bgCyan:  '\x1b[46m',
-  bgGreen: '\x1b[42m',
-  bgRed:   '\x1b[41m',
 };
 
 const W = Math.min(process.stdout.columns || 64, 76);
 const LINE = C.dim + '─'.repeat(W) + C.reset;
 const DLINE = C.dim + '═'.repeat(W) + C.reset;
 
-// ─── Yordamchi funksiyalar ─────────────────────────────────────────────────────
-function cls() { process.stdout.write('\x1b[H\x1b[J'); }
+function cls() {
+  if (process.stdout.isTTY) {
+    process.stdout.write('\x1b[H\x1b[J');
+  } else {
+    console.log('\n--- ANTIGRAVITY BYPASS ---\n');
+  }
+}
 
 function center(str) {
   const plain = str.replace(/\x1b\[[0-9;]*m/g, '');
@@ -51,399 +54,431 @@ function err(msg)  { return `  ${C.red}✗${C.reset}  ${msg}`; }
 function info(msg) { return `  ${C.cyan}ℹ${C.reset}  ${msg}`; }
 function warn(msg) { return `  ${C.yellow}⚠${C.reset}  ${msg}`; }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
 // ─── Banner ────────────────────────────────────────────────────────────────────
-function drawBanner() {
+function drawBanner(netInfo) {
   console.log('');
-  console.log(center(`${C.bold}${C.cyan}╔═══════════════════════════════════════════════╗${C.reset}`));
-  console.log(center(`${C.bold}${C.cyan}║                                               ║${C.reset}`));
-  console.log(center(`${C.bold}${C.cyan}║   🚀  ANTIGRAVITY MANAGER  🚀                 ║${C.reset}`));
-  console.log(center(`${C.bold}${C.cyan}║   Barcha hududlarda ishlash uchun              ║${C.reset}`));
-  console.log(center(`${C.bold}${C.cyan}║                                               ║${C.reset}`));
-  console.log(center(`${C.bold}${C.cyan}╚═══════════════════════════════════════════════╝${C.reset}`));
+  console.log(center(`${C.bold}${C.cyan}╔══════════════════════════════════════════════════════════╗${C.reset}`));
+  console.log(center(`${C.bold}${C.cyan}║         🚀  ANTIGRAVITY BYPASS & UNLOCKER  🚀            ║${C.reset}`));
+  console.log(center(`${C.bold}${C.cyan}║       Mintaqaviy cheklovlardan to'liq ozod qilish        ║${C.reset}`));
+  console.log(center(`${C.bold}${C.cyan}╚══════════════════════════════════════════════════════════╝${C.reset}`));
   console.log('');
+
+  if (netInfo && netInfo.ok) {
+    const vpnBadge = netInfo.isVpn ? `${C.green}🛡️ [VPN FAOL: ${netInfo.country}]${C.reset}` : `${C.yellow}⚠️ [MAHALLIY INTERNET: ${netInfo.country}]${C.reset}`;
+    console.log(center(`${C.dim}Tarmoq:${C.reset} ${netInfo.ip} (${netInfo.org || 'ISP'}) ${vpnBadge}`));
+    console.log('');
+  }
 }
 
-// ─── Menyu ─────────────────────────────────────────────────────────────────────
-let selectedIdx = 0;
-
-const MENU_ITEMS = [
-  {
-    key: '1',
-    icon: '⚡',
-    label: 'Patch — Barcha hududlarda ishlash',
-    desc: 'Binary va IDE fayllarini patch qilish + DNS bypass o\'rnatish',
-    color: C.yellow,
-  },
-  {
-    key: '2',
-    icon: '🤖',
-    label: 'Telegram Bot — Masofaviy terminal',
-    desc: 'Telegram orqali buyruqlar yuborish va AGY boshqarish',
-    color: C.green,
-  },
-  {
-    key: '3',
-    icon: '🚪',
-    label: 'Chiqish',
-    desc: 'Terminalni yopish',
-    color: C.red,
-  },
-];
-
-function drawMenu() {
-  console.log(LINE);
-  console.log(`  ${C.bold}${C.white}Tanlang:${C.reset}`);
-  console.log('');
-
-  for (let i = 0; i < MENU_ITEMS.length; i++) {
-    const item = MENU_ITEMS[i];
-    const isSel = i === selectedIdx;
-    const num = `${C.bold}[${item.key}]${C.reset}`;
-
-    if (isSel) {
-      console.log(`  ${C.bold}${C.cyan}▸${C.reset} ${num}  ${item.icon}  ${C.bold}${item.color}${item.label}${C.reset}`);
-    } else {
-      console.log(`    ${num}  ${item.icon}  ${C.white}${item.label}${C.reset}`);
+// ─── 1. Qidiruv kartochkalarini chiqarish (Searching for installations...) ────
+function renderDiscoveryCards(allInstalls) {
+  console.log(`] ${C.bold}Searching for installations...${C.reset}`);
+  for (const inst of allInstalls) {
+    const nameLine = `  ─ ${C.bold}${inst.name}${C.reset} ` + '─'.repeat(Math.max(4, 52 - inst.name.length));
+    console.log(nameLine);
+    console.log(`      Target:  ${inst.target === 'Not found' ? C.dim + 'Not found' + C.reset : C.cyan + inst.target + C.reset}`);
+    
+    let statusFormatted = C.red + 'not found' + C.reset;
+    if (inst.status === 'found') {
+      statusFormatted = C.green + 'found' + C.reset;
     }
-  }
+    console.log(`      Status:  ${statusFormatted}`);
 
-  console.log('');
-  console.log(LINE);
-
-  const curItem = MENU_ITEMS[selectedIdx];
-  console.log(`  ${C.cyan}ℹ${C.reset}  ${C.dim}${curItem.desc}${C.reset}`);
-  console.log(`  ${C.dim}↑↓ harakat  │  Enter tanlash  │  1-3 tezkor tanlash${C.reset}`);
-}
-
-function render() {
-  process.stdout.write('\x1b[?25l'); // kursorni yashirish
-  cls();
-  drawBanner();
-  drawMenu();
-}
-
-// ─── Patch amaliyoti ───────────────────────────────────────────────────────────
-async function actionPatch(interactive = true) {
-  cls();
-  console.log('');
-  console.log(center(`${C.bold}${C.yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${C.reset}`));
-  console.log(center(`${C.bold}${C.yellow}  ⚡ TO'LIQ PATCH — BARCHA HUDUDLAR UCHUN${C.reset}`));
-  console.log(center(`${C.bold}${C.yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${C.reset}`));
-  console.log('');
-
-  const steps = [
-    { label: 'Binary fayllar qidirilmoqda...', icon: '🔍' },
-    { label: 'Binary patch qilinmoqda (ineligible → inexigible)...', icon: '🔧' },
-    { label: 'Proxy var almashtirilmoqda (https_proxy → AG_LS_PROXY)...', icon: '🔗' },
-    { label: 'IDE main.js patch qilinmoqda...', icon: '📝' },
-    { label: 'DNS bypass o\'rnatilmoqda...', icon: '🌐' },
-    { label: 'DNS kesh tozalanmoqda...', icon: '🧹' },
-  ];
-
-  // Animate steps
-  for (let i = 0; i < 3; i++) {
-    console.log(`  ${C.dim}[${i+1}/6]${C.reset} ${steps[i].icon}  ${steps[i].label}`);
-    await sleep(300);
-  }
-
-  // Execute patch
-  let patchResult = { ok: 0, failed: 0, proxyVar: 0, jsPatched: 0, jsFailed: 0, errors: [], details: [] };
-  let dnsResult = { ok: false };
-
-  try {
-    const bypass = require('./src/bypass');
-
-    // Kill CLI processes first
-    bypass.patch.killAffectedProcesses();
-    await sleep(400);
-
-    // Run all patches
-    patchResult = bypass.patch.patchAllInstalls({ force: true });
-
-    console.log(`  ${C.dim}[4/6]${C.reset} ${steps[3].icon}  ${steps[3].label}`);
-    await sleep(200);
-
-    // DNS bypass
-    console.log(`  ${C.dim}[5/6]${C.reset} ${steps[4].icon}  ${steps[4].label}`);
-    try {
-      dnsResult = await bypass.dns.setup({ force: true });
-    } catch (e) {
-      dnsResult = { ok: false, error: e.message };
+    if (inst.status === 'found') {
+      let patchFormatted = C.red + 'not patched' + C.reset;
+      if (inst.patch === 'already patched') {
+        patchFormatted = C.green + 'already patched' + C.reset;
+      }
+      console.log(`      Patch:   ${patchFormatted}`);
+      if (inst.version && inst.version !== 'N/A') {
+        console.log(`      Version: ${inst.version}`);
+      }
+      if (inst.size && inst.size !== 'N/A') {
+        console.log(`      Size:    ${inst.size}`);
+      }
     }
-
-    console.log(`  ${C.dim}[6/6]${C.reset} ${steps[5].icon}  ${steps[5].label}`);
-    try { bypass.dns.flushDnsCache(); } catch (_) {}
-  } catch (e) {
-    patchResult.errors.push(e.message);
+    console.log('');
   }
+}
 
-  await sleep(300);
-
-  // Show results
-  console.log('');
+// ─── 2. Sizda borlari ro'yxati (1 dan boshlanadi) ──────────────────────────────
+function renderInstalledList(installedOnly) {
+  console.log(DLINE);
+  console.log(`  ${C.bold}${C.white}📦 SIZDA BORLARI (Mavjud o'rnatilmalar):${C.reset}`);
   console.log(DLINE);
   console.log('');
-  console.log(center(`${C.bold}${C.cyan}── NATIJALAR ──${C.reset}`));
-  console.log('');
 
-  // Binary results
-  const totalBin = patchResult.ok + patchResult.failed;
-  if (totalBin > 0) {
-    console.log(`  ${C.bold}${C.cyan}BINARY FAYLLAR:${C.reset}`);
-    if (patchResult.ok > 0) {
-      console.log(ok(`${C.bold}${C.green}${patchResult.ok}${C.reset} ta binary muvaffaqiyatli patch qilindi`));
-    }
-    if (patchResult.proxyVar > 0) {
-      console.log(ok(`${patchResult.proxyVar} ta proxy var almashtirildi`));
-    }
-    if (patchResult.failed > 0) {
-      console.log(err(`${patchResult.failed} ta binary patch bo'lmadi`));
-    }
-  } else {
-    console.log(warn('Binary fayllar topilmadi. Antigravity o\'rnatilganligini tekshiring.'));
-  }
-
-  console.log('');
-
-  // JS results
-  const totalJs = (patchResult.jsPatched || 0) + (patchResult.jsFailed || 0);
-  if (totalJs > 0) {
-    console.log(`  ${C.bold}${C.cyan}IDE / EXTENSION FAYLLAR:${C.reset}`);
-    if (patchResult.jsPatched > 0) {
-      console.log(ok(`${C.bold}${C.green}${patchResult.jsPatched}${C.reset} ta JS fayl patch qilindi`));
-    }
-    if (patchResult.jsFailed > 0) {
-      console.log(err(`${patchResult.jsFailed} ta JS fayl patch bo'lmadi`));
-    }
-  }
-
-  console.log('');
-
-  // DNS results
-  console.log(`  ${C.bold}${C.cyan}DNS BYPASS:${C.reset}`);
-  if (dnsResult.ok) {
-    const methodStr = dnsResult.method === 'hosts' ? ' (hosts fayli orqali)' : ' (NRPT relay orqali)';
-    console.log(ok(`${C.bold}${C.green}DNS Bypass muvaffaqiyatli o'rnatildi${methodStr}!${C.reset}`));
-    if (dnsResult.vpnActive) {
-      console.log(info(`VPN aktiv — ISP interfeysi: ${dnsResult.ifName || '?'}`));
-    }
-  } else {
-    console.log(warn(`DNS bypass: ${dnsResult.error || 'Administrator huquqi kerak bo\'lishi mumkin'}`));
-    console.log(info('DNS bypass uchun terminalni Administrator sifatida ishga tushiring.'));
-  }
-
-  // Show details
-  if (patchResult.details && patchResult.details.length) {
+  if (installedOnly.length === 0) {
+    console.log(warn('Kompyuteringizda Antigravity o\'rnatilmalari topilmadi.'));
     console.log('');
-    console.log(`  ${C.bold}${C.cyan}BATAFSIL:${C.reset}`);
-    for (const d of patchResult.details) {
-      console.log(`  ${C.dim}${d}${C.reset}`);
-    }
-  }
-
-  // Show errors
-  if (patchResult.errors.length) {
-    console.log('');
-    console.log(`  ${C.bold}${C.red}XATOLIKLAR:${C.reset}`);
-    for (const e of patchResult.errors) {
-      console.log(err(e));
-    }
-  }
-
-  console.log('');
-
-  // Final verdict
-  if (patchResult.ok > 0 || (patchResult.jsPatched || 0) > 0) {
-    console.log(DLINE);
-    console.log('');
-    console.log(center(`${C.bold}${C.green}✅ PATCH MUVAFFAQIYATLI!${C.reset}`));
-    console.log(center(`${C.dim}Antigravity endi barcha hududlarda ishlaydi.${C.reset}`));
-    console.log(center(`${C.dim}VPN kerak emas — to'g'ridan-to'g'ri provayder orqali.${C.reset}`));
-  } else if (totalBin === 0 && totalJs === 0) {
-    console.log(DLINE);
-    console.log('');
-    console.log(center(`${C.bold}${C.yellow}⚠ Antigravity o'rnatilmagan yoki topilmadi.${C.reset}`));
-    console.log(center(`${C.dim}Avval Antigravity IDE yoki CLI o'rnating.${C.reset}`));
-  }
-
-  if (interactive && process.stdin.isTTY) {
-    console.log('');
-    console.log(`  ${C.dim}Davom etish uchun har qanday tugmani bosing...${C.reset}`);
-    await waitForKey();
-  }
-}
-
-// ─── Telegram Bot ──────────────────────────────────────────────────────────────
-async function actionBot() {
-  teardownKeyboard();
-  cls();
-  console.log('');
-  console.log(center(`${C.bold}${C.cyan}╔══════════════════════════════════════════╗${C.reset}`));
-  console.log(center(`${C.bold}${C.cyan}║    🤖  TELEGRAM BOT ISHGA TUSHMOQDA  🤖  ║${C.reset}`));
-  console.log(center(`${C.bold}${C.cyan}╚══════════════════════════════════════════╝${C.reset}`));
-  console.log('');
-
-  // Check .env configuration
-  try {
-    require('dotenv').config();
-  } catch (_) {}
-
-  const token = process.env.BOT_TOKEN;
-  const adminId = process.env.ADMIN_CHAT_ID;
-
-  if (!token || !adminId) {
-    console.log(warn('⚠️ .env faylida BOT_TOKEN yoki ADMIN_CHAT_ID belgilanmagan.'));
-    console.log(info(`Server Web Dashboard rejimida ishga tushirilmoqda (http://localhost:${process.env.PORT || '3000'})...`));
-    console.log(info('Telegram botni to\'liq ulash uchun .env fayliga BOT_TOKEN va ADMIN_CHAT_ID kiriting.'));
-    console.log('');
-    console.log(`  ${C.dim}Server ishlamoqda. Chiqish uchun: ${C.bold}Ctrl+C${C.reset}${C.dim} bosing.${C.reset}`);
-    console.log(LINE);
-    console.log('');
-    require('./server.js');
     return;
   }
 
-  console.log(info(`Bot Token: ${C.dim}...${token.slice(-8)}${C.reset}`));
-  console.log(info(`Admin ID: ${C.dim}${adminId}${C.reset}`));
-  console.log('');
-  console.log(`  ${C.dim}Bot ishlamoqda. Chiqish uchun: ${C.bold}Ctrl+C${C.reset}${C.dim} bosing.${C.reset}`);
-  console.log(LINE);
-  console.log('');
+  for (let i = 0; i < installedOnly.length; i++) {
+    const inst = installedOnly[i];
+    const num = `${C.bold}${C.yellow}[${i + 1}]${C.reset}`;
+    const isP = inst.patch === 'already patched';
+    const badge = isP ? `${C.green}[PATCHED ✓]${C.reset}` : `${C.red}[NOT PATCHED ✗]${C.reset}`;
 
-  // Start the bot server
-  require('./server.js');
+    console.log(`  ${num} ${C.bold}${C.white}${inst.name}${C.reset}  ${badge}`);
+    console.log(`      ${C.dim}Yo'l:${C.reset}    ${C.cyan}${inst.target}${C.reset}`);
+    const metaParts = [];
+    if (inst.version && inst.version !== 'N/A') metaParts.push(`Versiya: ${C.bold}${inst.version}${C.reset}`);
+    if (inst.size && inst.size !== 'N/A') metaParts.push(`Hajm: ${inst.size}`);
+    if (metaParts.length) {
+      console.log(`      ${C.dim}Ma'lumot:${C.reset} ${metaParts.join('  │  ')}`);
+    }
+    console.log('');
+  }
 }
 
-// ─── Chiqish ───────────────────────────────────────────────────────────────────
-function actionExit() {
+// ─── 3. Menyu variantlarini ko'rsatish ──────────────────────────────────────────
+function renderMenuOptions(installedCount) {
+  console.log(LINE);
+  console.log(`  ${C.bold}${C.white}⚡ Buyruqlar:${C.reset}`);
+  if (installedCount > 0) {
+    console.log(`    ${C.bold}[1 - ${installedCount}]${C.reset}  Tanlangan o'rnatilmani patch qilish (Bypass & Patch)`);
+    console.log(`    ${C.bold}[A]${C.reset}      BARCHASINI birvarakayiga patch qilish (${C.green}Tavsiya etiladi${C.reset})`);
+    console.log(`    ${C.bold}[R]${C.reset}      Asliga qaytarish (Restore / Unpatch)`);
+  }
+  console.log(`    ${C.bold}[S]${C.reset}      Status & Diagnostika (Tarmoq, DNS, NRPT)`);
+  console.log(`    ${C.bold}[W]${C.reset}      Watchdog avto-patch (fon rejimida kuzatuvchi)`);
+  console.log(`    ${C.bold}[Q]${C.reset}      Chiqish`);
+  console.log(LINE);
+}
+
+// ─── Readline bilan so'rov olish ───────────────────────────────────────────────
+function ask(rl, promptText) {
+  return new Promise(resolve => {
+    rl.question(promptText, answer => {
+      resolve((answer || '').trim());
+    });
+  });
+}
+
+function waitEnter(rl) {
+  return new Promise(resolve => {
+    rl.question(`\n  ${C.dim}Davom etish uchun Enter bosing...${C.reset}`, () => {
+      resolve();
+    });
+  });
+}
+
+// ─── Bitta o'rnatilmani patch qilish ──────────────────────────────────────────
+async function handlePatchSingle(inst, rl) {
   cls();
   console.log('');
-  console.log(center(`${C.bold}${C.cyan}Xayr! 👋${C.reset}`));
+  console.log(center(`${C.bold}${C.yellow}╔══════════════════════════════════════════════════════════╗${C.reset}`));
+  console.log(center(`${C.bold}${C.yellow}║         ⚡  PATCH QILINMOQDA: ${inst.name.padEnd(23)} ║${C.reset}`));
+  console.log(center(`${C.bold}${C.yellow}╚══════════════════════════════════════════════════════════╝${C.reset}`));
   console.log('');
-  if (process.stdin.isTTY) try { process.stdin.setRawMode(false); } catch (_) {}
-  process.stdout.write('\x1b[?25h');
-  process.exit(0);
-}
 
-// ─── Keyboard ──────────────────────────────────────────────────────────────────
-let dataListener = null;
+  console.log(info(`Fayl tekshirilmoqda: ${inst.target}`));
 
-function teardownKeyboard() {
-  process.stdin.removeAllListeners('keypress');
-  if (dataListener) {
-    process.stdin.removeListener('data', dataListener);
-    dataListener = null;
+  const res = patch.patchInstallation(inst, { force: true });
+  console.log('');
+
+  if (res.success || res.alreadyDone) {
+    console.log(ok(`${C.bold}${C.green}${inst.name}${C.reset} muvaffaqiyatli moslashtirildi!`));
+    for (const d of res.details) {
+      console.log(`   ${C.dim}• ${d}${C.reset}`);
+    }
+  } else {
+    console.log(err(`${inst.name} patch qilishda muammo yuz berdi:`));
+    for (const e of res.errors) {
+      console.log(`   ${C.red}• ${e}${C.reset}`);
+    }
   }
-  if (process.stdin.isTTY) {
-    try { process.stdin.setRawMode(false); } catch (_) {}
+
+  // Tarmoq DNS moslashuvi
+  const dnsRes = await dnsBypass.setup();
+  console.log('');
+  if (dnsRes && dnsRes.vpnActive) {
+    console.log(ok(`${C.green}VPN aniqlandi: ${dnsRes.note}${C.reset}`));
+  } else if (dnsRes && dnsRes.ok) {
+    console.log(ok(`SmartDNS bypass faollashtirildi (${dnsRes.method}).`));
   }
-  process.stdout.write('\x1b[?25h');
+
+  await waitEnter(rl);
 }
 
-function waitForKey() {
-  return new Promise(resolve => {
-    const onData = () => {
-      process.stdin.removeListener('data', onData);
-      resolve();
-    };
-    process.stdin.once('data', onData);
-  });
-}
+// ─── Barchasini patch qilish ──────────────────────────────────────────────────
+async function handlePatchAll(rl) {
+  cls();
+  console.log('');
+  console.log(center(`${C.bold}${C.yellow}╔══════════════════════════════════════════════════════════╗${C.reset}`));
+  console.log(center(`${C.bold}${C.yellow}║      ⚡  BARCHA O'RNATILMALARNI OCHISH & PATCH  ⚡       ║${C.reset}`));
+  console.log(center(`${C.bold}${C.yellow}╚══════════════════════════════════════════════════════════╝${C.reset}`));
+  console.log('');
 
-let isActionRunning = false;
-
-async function handleSelect(key) {
-  if (isActionRunning) return;
-  isActionRunning = true;
-  teardownKeyboard();
+  console.log(info('Tizimdagi barcha Antigravity fayllari va tarmoq sozlanmoqda...'));
+  console.log('');
 
   try {
-    switch (key) {
-      case '1': await actionPatch(true);  break;
-      case '2': await actionBot();        return;
-      case '3': actionExit();             return;
-      default:  break;
+    const res = await bypass.enable({ force: true });
+    const { patch: pRes, dns: dRes } = res;
+
+    console.log(`  ${C.bold}${C.cyan}NATIJALAR:${C.reset}`);
+    if (pRes.ok > 0) {
+      console.log(ok(`${pRes.ok} ta binar fayl patch qilindi.`));
     }
-  } finally {
-    isActionRunning = false;
+    if (pRes.jsPatched > 0) {
+      console.log(ok(`${pRes.jsPatched} ta IDE/JS fayl moslashtirildi.`));
+    }
+    if (dRes && dRes.vpnActive) {
+      console.log(ok(`${C.green}VPN faol: Tabiiy VPN marshruti orqali ishlamoqda.${C.reset}`));
+    } else if (dRes && dRes.ok) {
+      console.log(ok(`SmartDNS marshrutlash faollashtirildi.`));
+    }
+
+    if (pRes.details && pRes.details.length) {
+      console.log('');
+      console.log(`  ${C.bold}${C.cyan}BATAFSIL:${C.reset}`);
+      for (const d of pRes.details) console.log(`  ${C.dim}${d}${C.reset}`);
+    }
+
+    console.log('');
+    console.log(DLINE);
+    console.log(center(`${C.bold}${C.green}✅ BARCHA ANTIGRAVITY O'RNATILMALARI TO'LIQ OCHILDI!${C.reset}`));
+  } catch (e) {
+    console.log(err(`Xatolik: ${e.message}`));
   }
 
-  render();
-  setupKeyboard();
+  await waitEnter(rl);
 }
 
-function setupKeyboard() {
-  teardownKeyboard();
+// ─── Asliga qaytarish (Restore) ───────────────────────────────────────────────
+async function handleRestore(installedOnly, rl) {
+  cls();
+  console.log('');
+  console.log(center(`${C.bold}${C.magenta}╔══════════════════════════════════════════════════════════╗${C.reset}`));
+  console.log(center(`${C.bold}${C.magenta}║            ↩️  ASL HOLATIGA QAYTARISH  ↩️                ║${C.reset}`));
+  console.log(center(`${C.bold}${C.magenta}╚══════════════════════════════════════════════════════════╝${C.reset}`));
+  console.log('');
 
-  readline.emitKeypressEvents(process.stdin);
-  if (process.stdin.isTTY) {
-    try { process.stdin.setRawMode(true); } catch (_) {}
+  console.log(`  Qaysi o'rnatilmani asliga qaytarmoqchisiz?`);
+  for (let i = 0; i < installedOnly.length; i++) {
+    console.log(`    [${i + 1}] ${installedOnly[i].name}`);
   }
-  try { process.stdin.resume(); } catch (_) {}
+  console.log(`    [A] Barchasini tiklash (Restore All)`);
+  console.log(`    [B] Orqaga qaytish`);
+  console.log('');
 
-  // If not a TTY or in piped mode, listen to data chunk
-  if (!process.stdin.isTTY) {
-    dataListener = (chunk) => {
-      const s = chunk.toString().trim();
-      if (['1', '2', '3'].includes(s)) {
-        selectedIdx = parseInt(s, 10) - 1;
-        handleSelect(s);
+  const choice = (await ask(rl, `  Tanlovingizni kiriting [1-${installedOnly.length}, A, B]: `)).toUpperCase();
+
+  if (choice === 'B' || choice === '') {
+    return;
+  }
+
+  if (choice === 'A') {
+    console.log('');
+    console.log(info('Barcha o\'rnatilmalar va tarmoq qoidalari tiklanmoqda...'));
+    for (const inst of installedOnly) {
+      const res = patch.unpatchInstallation(inst);
+      if (res.success || res.alreadyDone) {
+        console.log(ok(`Tiklandi: ${inst.name}`));
       }
-    };
-    process.stdin.on('data', dataListener);
+    }
+    dnsBypass.teardown(true);
+    console.log(ok('NRPT va DNS sozlamalari tozalandi.'));
+    console.log('');
+    console.log(DLINE);
+    console.log(center(`${C.bold}${C.green}Barcha o'rnatilmalar asl holatiga qaytarildi.${C.reset}`));
+  } else {
+    const num = parseInt(choice, 10);
+    if (!isNaN(num) && num >= 1 && num <= installedOnly.length) {
+      const targetInst = installedOnly[num - 1];
+      console.log('');
+      console.log(info(`${targetInst.name} tiklanmoqda...`));
+      const res = patch.unpatchInstallation(targetInst);
+      if (res.success || res.alreadyDone) {
+        console.log(ok(`Tiklandi: ${targetInst.name}`));
+        for (const d of res.details) console.log(`   ${C.dim}• ${d}${C.reset}`);
+      } else {
+        console.log(err(`Xatolik: ${res.errors.join(', ')}`));
+      }
+    } else {
+      console.log(warn('Noto\'g\'ri tanlov.'));
+    }
   }
 
-  process.stdin.on('keypress', (str, key) => {
-    if (!key) return;
+  await waitEnter(rl);
+}
 
-    if (key.ctrl && key.name === 'c') {
-      actionExit();
+// ─── Status & Diagnostika ─────────────────────────────────────────────────────
+async function handleStatus(allInstalls, rl) {
+  cls();
+  console.log('');
+  console.log(center(`${C.bold}${C.cyan}╔══════════════════════════════════════════════════════════╗${C.reset}`));
+  console.log(center(`${C.bold}${C.cyan}║             🔍  TIZIM DIAGNOSTIKASI  🔍                  ║${C.reset}`));
+  console.log(center(`${C.bold}${C.cyan}╚══════════════════════════════════════════════════════════╝${C.reset}`));
+  console.log('');
+
+  const netInfo = await getNetworkStatus(true);
+  console.log(`  ${C.bold}${C.cyan}TARMOQ VA VPN:${C.reset}`);
+  console.log(`  • Tashqi IP: ${C.bold}${netInfo.ip}${C.reset} (${netInfo.country}, ${netInfo.city || ''})`);
+  console.log(`  • Provayder: ${netInfo.org || 'Noma\'lum'}`);
+  console.log(`  • VPN holati: ${netInfo.isVpn ? C.green + '🛡️ FAOL (SOTA yoki boshqa VPN)' : C.yellow + '⚠️ NOFAOL (Mahalliy provayder)'}${C.reset}`);
+  console.log('');
+
+  console.log(`  ${C.bold}${C.cyan}O'RNATILMALAR STATUSI:${C.reset}`);
+  for (const inst of allInstalls) {
+    const isFound = inst.status === 'found';
+    const isP = inst.patch === 'already patched';
+    const badge = !isFound ? `${C.dim}[TOPILMADI]${C.reset}` : (isP ? `${C.green}[PATCHED ✓]${C.reset}` : `${C.red}[NOT PATCHED ✗]${C.reset}`);
+    console.log(`  • ${badge} ${C.bold}${inst.name}${C.reset}`);
+    console.log(`    ${C.dim}${inst.target}${C.reset}`);
+  }
+  console.log('');
+
+  const nrptApplied = dnsBypass.isNrptApplied();
+  console.log(`  ${C.bold}${C.cyan}DNS & NRPT QOIDALARI:${C.reset}`);
+  console.log(`  • NRPT holati: ${nrptApplied ? C.yellow + 'Faol (SmartDNS bypass)' : C.green + 'Toza (Standart/VPN)'}${C.reset}`);
+
+  await waitEnter(rl);
+}
+
+// ─── Watchdog (Fon rejimi) ────────────────────────────────────────────────────
+async function handleWatchdog(rl) {
+  cls();
+  console.log('');
+  console.log(center(`${C.bold}${C.blue}╔══════════════════════════════════════════════════════════╗${C.reset}`));
+  console.log(center(`${C.bold}${C.blue}║          🛡️  WATCHDOG AVTO-NAZORATCHI  🛡️                ║${C.reset}`));
+  console.log(center(`${C.bold}${C.blue}╚══════════════════════════════════════════════════════════╝${C.reset}`));
+  console.log('');
+  console.log(info('Watchdog xizmati faol.'));
+  console.log(info('Google Antigravity har yangilanganda, avtomatik qayta patch qilinadi.'));
+  console.log(`  ${C.dim}To'xtatish uchun: ${C.bold}Ctrl+C${C.reset} bosing.${C.reset}`);
+  console.log(LINE);
+
+  const { Watchdog } = require('./src/bypass/watchdog');
+  const wd = new Watchdog();
+  wd.on('repatched', ({ bin }) => console.log(ok(`Yangilanish sezildi va qayta patch qilindi: ${bin}`)));
+  wd.on('failed', ({ bin }) => console.log(err(`Qayta patch qilishda xato: ${bin}`)));
+  wd.start();
+}
+
+// ─── Asosiy interaktiv sikl ───────────────────────────────────────────────────
+async function runInteractiveLoop() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  while (true) {
+    cls();
+    const netInfo = await getNetworkStatus();
+    drawBanner(netInfo);
+
+    // 1. O'rnatilmalarni aniqlash
+    const allInstalls = patch.detectInstallations();
+    renderDiscoveryCards(allInstalls);
+
+    // 2. Sizda borlari ro'yxati (1 dan boshlanadi)
+    const installedOnly = allInstalls.filter(i => i.status === 'found');
+    renderInstalledList(installedOnly);
+
+    // 3. Menyu buyruqlari
+    renderMenuOptions(installedOnly.length);
+
+    // 4. Foydalanuvchidan son/buyruq tanlashni so'rash
+    const answer = (await ask(rl, `  ${C.bold}Tanlovingizni kiriting [1-${installedOnly.length || 1}, A, R, S, W, Q]: ${C.reset}`)).toUpperCase();
+
+    if (answer === 'Q' || answer === '0') {
+      cls();
+      console.log('');
+      console.log(center(`${C.bold}${C.cyan}Xayr! Antigravity muvaffaqiyatli ishlashda davom etadi. 👋${C.reset}`));
+      console.log('');
+      rl.close();
+      process.exit(0);
+    }
+
+    if (answer === 'A' || answer === 'B') {
+      await handlePatchAll(rl);
+      continue;
+    }
+
+    if (answer === 'R') {
+      await handleRestore(installedOnly, rl);
+      continue;
+    }
+
+    if (answer === 'S') {
+      await handleStatus(allInstalls, rl);
+      continue;
+    }
+
+    if (answer === 'W') {
+      rl.close();
+      await handleWatchdog();
       return;
     }
 
-    if (key.name === 'up') {
-      selectedIdx = (selectedIdx - 1 + MENU_ITEMS.length) % MENU_ITEMS.length;
-      render();
-      return;
-    }
-    if (key.name === 'down') {
-      selectedIdx = (selectedIdx + 1) % MENU_ITEMS.length;
-      render();
-      return;
-    }
-    if (key.name === 'return' || key.name === 'enter') {
-      handleSelect(MENU_ITEMS[selectedIdx].key);
-      return;
+    const selectedNum = parseInt(answer, 10);
+    if (!isNaN(selectedNum) && selectedNum >= 1 && selectedNum <= installedOnly.length) {
+      const selectedInst = installedOnly[selectedNum - 1];
+      await handlePatchSingle(selectedInst, rl);
+      continue;
     }
 
-    // 1-3 direct select
-    if (str && /^[1-3]$/.test(str)) {
-      selectedIdx = parseInt(str, 10) - 1;
-      handleSelect(str);
+    // Agar noma'lum buyruq kiritilgan bo'lsa
+    console.log(`\n  ${C.yellow}⚠ Noto'g'ri tanlov kiritildi: "${answer}". Qaytadan urinib ko'ring.${C.reset}`);
+    await waitEnter(rl);
+  }
+}
+
+// ─── CLI Parametrlar orqali chaqirilganda ──────────────────────────────────────
+async function main() {
+  const args = process.argv.slice(2);
+  const cmd = args[0] ? args[0].toLowerCase() : '';
+
+  if (cmd === 'patch' || cmd === 'unlock') {
+    const num = parseInt(args[1], 10);
+    const all = patch.detectInstallations();
+    const installed = all.filter(i => i.status === 'found');
+
+    if (!isNaN(num) && num >= 1 && num <= installed.length) {
+      console.log(`⚡ Patch qo'llanilmoqda: ${installed[num - 1].name}...`);
+      const r = patch.patchInstallation(installed[num - 1], { force: true });
+      console.log(r.success || r.alreadyDone ? '✅ Muvaffaqiyatli!' : '❌ Xato: ' + r.errors.join(', '));
+    } else {
+      console.log(`⚡ Barcha Antigravity o'rnatilmalari patch qilinmoqda...`);
+      await bypass.enable({ force: true });
+      console.log('✅ Barchasi patch qilindi!');
     }
+    process.exit(0);
+  }
+
+  if (cmd === 'status') {
+    const all = patch.detectInstallations();
+    const rlFake = { question: (_, cb) => cb('') };
+    await handleStatus(all, rlFake);
+    process.exit(0);
+  }
+
+  if (cmd === 'restore' || cmd === 'unpatch') {
+    const all = patch.detectInstallations();
+    const installed = all.filter(i => i.status === 'found');
+    for (const inst of installed) patch.unpatchInstallation(inst);
+    dnsBypass.teardown(true);
+    console.log('✅ Barcha o\'rnatilmalar asl holatiga qaytarildi.');
+    process.exit(0);
+  }
+
+  if (cmd === 'watchdog') {
+    await handleWatchdog();
+    return;
+  }
+
+  // Standart: interaktiv menyu
+  await runInteractiveLoop();
+}
+
+if (require.main === module) {
+  main().catch(e => {
+    console.error('Xatolik:', e);
+    process.exit(1);
   });
 }
 
-// ─── Entry point ───────────────────────────────────────────────────────────────
-(async () => {
-  // CLI argument support
-  const arg = process.argv[2];
-  if (arg) {
-    if (['1', 'patch', 'unlock'].includes(arg)) {
-      await actionPatch(false);
-      process.exit(0);
-    }
-    if (['2', 'bot', 'server'].includes(arg)) {
-      await actionBot();
-      return;
-    }
-    if (['3', 'exit', 'quit'].includes(arg)) {
-      process.exit(0);
-    }
-  }
-
-  render();
-  setupKeyboard();
-})();
+module.exports = { main };

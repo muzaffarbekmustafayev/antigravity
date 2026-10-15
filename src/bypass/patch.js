@@ -392,6 +392,10 @@ function findBinaryTargets(installRoot) {
   if (isWin) {
     candidates.push(path.join(installRoot, 'resources', 'app', 'out', `language_server${ext}`));
     candidates.push(path.join(installRoot, 'resources', `language_server${ext}`));
+    candidates.push(path.join(installRoot, 'resources', 'bin', `language_server${ext}`));
+    candidates.push(path.join(installRoot, 'resources', 'bin', `language_server_windows_x64${ext}`));
+    candidates.push(path.join(installRoot, 'resources', 'app', 'bin', `language_server${ext}`));
+    candidates.push(path.join(installRoot, 'resources', 'app', 'bin', `language_server_windows_x64${ext}`));
     candidates.push(path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server_windows_x64${ext}`));
     candidates.push(path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server${ext}`));
     candidates.push(path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server_windows_arm64${ext}`));
@@ -620,10 +624,439 @@ function patchAllInstalls(options = {}) {
   return summary;
 }
 
+// ─── Helpers: Format, Version & State ──────────────────────────────────────────
+
+function formatSize(bytes) {
+  if (!bytes || bytes <= 0) return '0 B';
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 1) return mb.toFixed(1) + ' MB';
+  const kb = bytes / 1024;
+  return kb.toFixed(1) + ' KB';
+}
+
+function getExeVersion(exePath) {
+  if (!exePath || !fs.existsSync(exePath)) return null;
+  try {
+    const { execFileSync } = require('child_process');
+    const cmd = '(Get-Item \x27' + exePath + '\x27).VersionInfo.FileVersion';
+    const out = execFileSync('powershell', ['-NoProfile', '-Command', cmd], {
+      encoding: 'utf8',
+      timeout: 2000,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const trimmed = out.trim();
+    if (trimmed) return trimmed;
+  } catch (_) {}
+  return null;
+}
+
+function getCliVersion(binPath) {
+  if (!binPath || !fs.existsSync(binPath)) return null;
+  try {
+    const { execFileSync } = require('child_process');
+    const out = execFileSync(binPath, ['--version'], {
+      encoding: 'utf8',
+      timeout: 1500,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const trimmed = out.trim();
+    if (trimmed) return trimmed.replace(/^agy\s*/i, '').trim();
+  } catch (_) {}
+  return null;
+}
+
+function isBinaryPatched(binPath) {
+  if (!binPath || !fs.existsSync(binPath)) return false;
+  const insp = inspectFile(binPath);
+  return insp.eligibility === PatchState.PATCHED;
+}
+
+/**
+ * Kompyuterdagi barcha Antigravity o'rnatilmalarini to'liq aniqlash
+ * (IDE, Antigravity 2.0, CLI, Gemini AGY va VS Code kengaytmalari)
+ */
+function detectInstallations() {
+  const local = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  const prog = process.env.PROGRAMFILES || 'C:\\Program Files';
+  const prog86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
+  const home = os.homedir();
+
+  const defs = [
+    {
+      id: 'ide',
+      name: 'ANTIGRAVITY IDE',
+      checkDirs: [
+        path.join(local, 'Programs', 'Antigravity IDE'),
+        path.join(prog, 'Antigravity IDE'),
+        path.join(prog86, 'Antigravity IDE'),
+      ],
+      targetRel: path.join('resources', 'app', 'out', 'main.js'),
+      exeRel: 'Antigravity IDE.exe',
+      extraBinRel: path.join('resources', 'app', 'extensions', 'antigravity', 'bin', 'language_server_windows_x64.exe'),
+      pkgRel: path.join('resources', 'app', 'package.json'),
+      type: 'ide'
+    },
+    {
+      id: 'antigravity2',
+      name: 'ANTIGRAVITY 2.0',
+      checkDirs: [
+        path.join(local, 'Programs', 'antigravity'),
+        path.join(local, 'Programs', 'Antigravity'),
+        path.join(prog, 'antigravity'),
+        path.join(prog, 'Antigravity'),
+      ],
+      targetRel: path.join('resources', 'bin', 'language_server.exe'),
+      exeRel: 'Antigravity.exe',
+      pkgRel: path.join('resources', 'app', 'package.json'),
+      type: 'bin'
+    },
+    {
+      id: 'cli',
+      name: 'ANTIGRAVITY CLI',
+      target: path.join(local, 'agy', 'bin', 'agy.exe'),
+      type: 'cli'
+    },
+    {
+      id: 'gemini_bin',
+      name: 'AGY BIN (.gemini)',
+      target: path.join(home, '.gemini', 'bin', 'agy.exe'),
+      type: 'cli'
+    },
+    {
+      id: 'vscode_ext',
+      name: 'ANTIGRAVITY VS CODE EXTENSION',
+      type: 'extension'
+    }
+  ];
+
+  const results = [];
+
+  for (const d of defs) {
+    if (d.id === 'ide' || d.id === 'antigravity2') {
+      let foundDir = null;
+      for (const c of d.checkDirs) {
+        if (fs.existsSync(c)) { foundDir = c; break; }
+      }
+      if (foundDir) {
+        const targetPath = path.join(foundDir, d.targetRel);
+        const exePath = d.exeRel ? path.join(foundDir, d.exeRel) : null;
+        const extraBin = d.extraBinRel ? path.join(foundDir, d.extraBinRel) : null;
+        const hasTarget = fs.existsSync(targetPath);
+        let size = null;
+        if (hasTarget) {
+          try { size = formatSize(fs.statSync(targetPath).size); } catch (_) {}
+        }
+        let ver = getExeVersion(exePath);
+        if (!ver && d.pkgRel) {
+          const pkgP = path.join(foundDir, d.pkgRel);
+          if (fs.existsSync(pkgP)) {
+            try { ver = JSON.parse(fs.readFileSync(pkgP, 'utf8')).version; } catch (_) {}
+          }
+        }
+
+        let patchStatus = 'not patched';
+        if (hasTarget) {
+          if (d.type === 'ide') {
+            try {
+              const content = fs.readFileSync(targetPath, 'utf8');
+              patchStatus = isJsPatched(content) ? 'already patched' : 'not patched';
+            } catch (_) {}
+          } else {
+            const st = inspectFile(targetPath);
+            patchStatus = st.eligibility === PatchState.PATCHED ? 'already patched' : 'not patched';
+          }
+        }
+
+        results.push({
+          id: d.id,
+          name: d.name,
+          target: hasTarget ? targetPath : 'Not found',
+          extraTargets: extraBin && fs.existsSync(extraBin) ? [extraBin] : [],
+          status: hasTarget ? 'found' : 'not found',
+          patch: patchStatus,
+          version: ver || 'N/A',
+          size: size || 'N/A',
+          type: d.type
+        });
+      } else {
+        results.push({
+          id: d.id,
+          name: d.name,
+          target: 'Not found',
+          extraTargets: [],
+          status: 'not found',
+          patch: 'not found',
+          version: 'N/A',
+          size: 'N/A',
+          type: d.type
+        });
+      }
+    } else if (d.type === 'cli') {
+      if (fs.existsSync(d.target)) {
+        let size = null;
+        try { size = formatSize(fs.statSync(d.target).size); } catch (_) {}
+        const isP = isBinaryPatched(d.target);
+        const ver = getCliVersion(d.target);
+        results.push({
+          id: d.id,
+          name: d.name,
+          target: d.target,
+          extraTargets: [],
+          status: 'found',
+          patch: isP ? 'already patched' : 'not patched',
+          version: ver || 'N/A',
+          size: size || 'N/A',
+          type: 'bin'
+        });
+      } else {
+        results.push({
+          id: d.id,
+          name: d.name,
+          target: 'Not found',
+          extraTargets: [],
+          status: 'not found',
+          patch: 'not found',
+          version: 'N/A',
+          size: 'N/A',
+          type: 'bin'
+        });
+      }
+    } else if (d.id === 'vscode_ext') {
+      let extFound = null;
+      const extDirs = [
+        path.join(home, '.vscode', 'extensions'),
+        path.join(home, '.vscode-insiders', 'extensions'),
+        path.join(home, '.cursor', 'extensions'),
+        path.join(home, '.windsurf', 'extensions')
+      ];
+      for (const ed of extDirs) {
+        if (fs.existsSync(ed)) {
+          try {
+            const dirs = fs.readdirSync(ed);
+            for (const item of dirs) {
+              if (/antigravity/i.test(item) && !/python/i.test(item)) {
+                extFound = path.join(ed, item);
+                break;
+              }
+            }
+          } catch (_) {}
+        }
+        if (extFound) break;
+      }
+
+      if (extFound) {
+        results.push({
+          id: d.id,
+          name: d.name,
+          target: extFound,
+          extraTargets: [],
+          status: 'found',
+          patch: 'ready',
+          version: 'N/A',
+          size: 'N/A',
+          type: 'extension'
+        });
+      } else {
+        results.push({
+          id: d.id,
+          name: d.name,
+          target: 'Not found',
+          extraTargets: [],
+          status: 'not found',
+          patch: 'not found',
+          version: 'N/A',
+          size: 'N/A',
+          type: 'extension'
+        });
+      }
+    }
+  }
+
+  // Scan all binary/JS targets across system and add any uncataloged ones
+  const catalogedTargets = new Set();
+  for (const r of results) {
+    if (r.target && r.target !== 'Not found') catalogedTargets.add(path.resolve(r.target).toLowerCase());
+    if (Array.isArray(r.extraTargets)) {
+      for (const et of r.extraTargets) catalogedTargets.add(path.resolve(et).toLowerCase());
+    }
+  }
+
+  const allBins = getAllBinaryTargets();
+  for (const b of allBins) {
+    const resolved = path.resolve(b).toLowerCase();
+    if (!catalogedTargets.has(resolved)) {
+      catalogedTargets.add(resolved);
+      let size = null;
+      try { size = formatSize(fs.statSync(b).size); } catch (_) {}
+      const isP = isBinaryPatched(b);
+      results.push({
+        id: `extra_bin_${path.basename(b)}`,
+        name: `ANTIGRAVITY (${path.basename(b)})`,
+        target: b,
+        extraTargets: [],
+        status: 'found',
+        patch: isP ? 'already patched' : 'not patched',
+        version: getCliVersion(b) || 'N/A',
+        size: size || 'N/A',
+        type: 'bin'
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Bitta aniq o'rnatilmani patch qilish
+ */
+function patchInstallation(item, options = {}) {
+  const result = {
+    name: item.name,
+    target: item.target,
+    success: false,
+    alreadyDone: false,
+    details: [],
+    errors: [],
+  };
+
+  if (!item || item.status === 'not found' || !item.target || item.target === 'Not found') {
+    result.errors.push('O\'rnatilma kompyuterda topilmadi');
+    return result;
+  }
+
+  if (item.type === 'ide') {
+    if (fs.existsSync(item.target)) {
+      const jsRes = patchIdeMainJs(item.target);
+      if (jsRes.ok) {
+        result.success = true;
+        result.alreadyDone = jsRes.alreadyDone;
+        if (jsRes.alreadyDone) {
+          result.details.push(`main.js — allaqachon patch qilingan`);
+        } else {
+          result.details.push(`main.js — muvaffaqiyatli patch qilindi`);
+        }
+      } else {
+        result.errors.push(`main.js: ${jsRes.error}`);
+      }
+    }
+    if (Array.isArray(item.extraTargets)) {
+      for (const eb of item.extraTargets) {
+        if (fs.existsSync(eb)) {
+          if (eb.endsWith('.js')) {
+            const r = patchIdeMainJs(eb);
+            if (r.ok) result.details.push(`${path.basename(eb)} — ${r.alreadyDone ? 'allaqachon patch qilingan' : 'patch qilindi'}`);
+          } else {
+            const r = patchFile(eb, options);
+            if (r.ok) {
+              result.details.push(`${path.basename(eb)} — ${r.alreadyDone ? 'allaqachon patch qilingan' : 'patch qilindi'}`);
+              if (!r.alreadyDone) result.alreadyDone = false;
+            } else {
+              result.errors.push(`${path.basename(eb)}: ${r.error}`);
+            }
+          }
+        }
+      }
+    }
+  } else if (item.type === 'bin' || item.type === 'cli') {
+    if (fs.existsSync(item.target)) {
+      const bRes = patchFile(item.target, options);
+      if (bRes.ok) {
+        result.success = true;
+        result.alreadyDone = bRes.alreadyDone;
+        if (bRes.alreadyDone) {
+          result.details.push(`${path.basename(item.target)} — allaqachon patch qilingan`);
+        } else {
+          result.details.push(`${path.basename(item.target)} — muvaffaqiyatli patch qilindi`);
+        }
+      } else {
+        result.errors.push(`${path.basename(item.target)}: ${bRes.error}`);
+      }
+    }
+  } else if (item.type === 'extension') {
+    if (fs.existsSync(item.target)) {
+      const jsFiles = findIdeJsTargets(item.target);
+      for (const j of jsFiles) {
+        const r = patchIdeMainJs(j);
+        if (r.ok) {
+          result.success = true;
+          result.details.push(`${path.basename(j)} — ${r.alreadyDone ? 'allaqachon patch qilingan' : 'patch qilindi'}`);
+        }
+      }
+      const binFiles = findBinaryTargets(item.target);
+      for (const b of binFiles) {
+        const r = patchFile(b, options);
+        if (r.ok) {
+          result.success = true;
+          result.details.push(`${path.basename(b)} — ${r.alreadyDone ? 'allaqachon patch qilingan' : 'patch qilindi'}`);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Bitta aniq o'rnatilmani asliga qaytarish (unpatch)
+ */
+function unpatchInstallation(item) {
+  const result = {
+    name: item.name,
+    target: item.target,
+    success: false,
+    alreadyDone: false,
+    details: [],
+    errors: [],
+  };
+
+  if (!item || item.status === 'not found' || !item.target || item.target === 'Not found') {
+    result.errors.push('O\'rnatilma kompyuterda topilmadi');
+    return result;
+  }
+
+  if (item.type === 'ide') {
+    if (fs.existsSync(item.target)) {
+      const r = restoreJsFromBackup(item.target);
+      if (r.ok) {
+        result.success = true;
+        result.details.push(`main.js — asl nusxadan tiklandi`);
+      } else {
+        result.details.push(`main.js — ${r.error || 'asl holatda'}`);
+      }
+    }
+    if (Array.isArray(item.extraTargets)) {
+      for (const eb of item.extraTargets) {
+        if (fs.existsSync(eb)) {
+          if (eb.endsWith('.js')) {
+            restoreJsFromBackup(eb);
+          } else {
+            const r = unpatchFile(eb);
+            if (r.ok) result.details.push(`${path.basename(eb)} — ${r.alreadyDone ? 'asl holatda' : 'asliga qaytarildi'}`);
+          }
+        }
+      }
+    }
+  } else if (item.type === 'bin' || item.type === 'cli') {
+    if (fs.existsSync(item.target)) {
+      const r = unpatchFile(item.target);
+      if (r.ok) {
+        result.success = true;
+        result.alreadyDone = r.alreadyDone;
+        result.details.push(`${path.basename(item.target)} — ${r.alreadyDone ? 'asl holatda' : 'asliga qaytarildi'}`);
+      } else {
+        result.errors.push(r.error);
+      }
+    }
+  }
+
+  return result;
+}
+
 // ─── Kill affected processes before patching ───────────────────────────────────
 function killAffectedProcesses() {
   if (os.platform() !== 'win32') return;
-  // Faqat agy CLI tekshiriladi — IDE va language_server larga tegilmaydi
   const procs = ['agy.exe'];
   const { execSync } = require('child_process');
   for (const p of procs) {
@@ -643,6 +1076,8 @@ module.exports = {
   repatchIfNeeded,
   patchIdeMainJs,
   restoreJsFromBackup,
+  isJsPatched,
+  isBinaryPatched,
   findBinaryTargets,
   findIdeJsTargets,
   discoverInstalls,
@@ -650,4 +1085,10 @@ module.exports = {
   getAllJsTargets,
   patchAllInstalls,
   killAffectedProcesses,
+  formatSize,
+  getExeVersion,
+  getCliVersion,
+  detectInstallations,
+  patchInstallation,
+  unpatchInstallation,
 };

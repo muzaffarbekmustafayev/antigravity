@@ -1,77 +1,51 @@
-# 🏗️ Antigravity Remote Terminal Bot — Arxitektura Qo'llanmasi
+# 🏗️ Antigravity Bypass & Regional Unlocker — Arxitektura Qo'llanmasi
 
 ## 📌 Umumiy Ko'rinish
 
-**Antigravity Remote Terminal Bot** — bu Telegram Bot API va mahalliy tizimingizdagi **Google Antigravity (`agy`)** CLI agenti o'rtasidagi xavfsiz ikki tomonlama ko'prikdir.
+**Antigravity Bypass & Regional Unlocker** — bu Google Antigravity (AGY), Antigravity 2.0 va Antigravity IDE vositalarini geo-cheklovlardan to'liq ozod qiluvchi tizimdir.
 
-U dasturchilarga o'z kompyuteridagi terminal jarayonlarini, fayllarni va AGY AI agentini masofadan boshqarish imkonini beradi.
+Tizim Windows NRPT, SmartDNS va Binar bayt patchlash orqali mintaqaviy cheklovlarni aylanib o'tadi va SOTA VPN (yoki boshqa VPN) ulanishlari bilan parallel, to'qnashuvlarsiz ishlaydi.
 
 ---
 
 ## 🏛️ Tizim Arxitekturasi
 
 ```
- ┌──────────────────────┐
- │     Telegram Foydalanuvchi   │ (Faqat ADMIN_CHAT_ID)
- └──────────┬───────────┘
-            │  HTTPS / Telegram Bot API (Long Polling)
-            ▼
  ┌────────────────────────────────────────────────────────┐
- │                 server.js (Node.js)                   │
- │                                                        │
- │  ┌───────────────────────┐  ┌────────────────────────┐ │
- │  │   Session Manager     │  │   5-Hour Limit Engine  │ │
- │  │  (Isolated CWD/State) │  │ (Rolling Window Quota) │ │
- │  └───────────┬───────────┘  └───────────┬────────────┘ │
- │              │                          │              │
- │  ┌───────────▼──────────────────────────▼────────────┐ │
- │  │       AGY CLI Process Spawner & Controller        │ │
- │  └───────────────────────┬───────────────────────────┘ │
- └──────────────────────────┼─────────────────────────────┘
-                            │ Child Process (exec)
-                            ▼
- ┌────────────────────────────────────────────────────────┐
- │       Google Antigravity CLI (agy.exe)                │
- │  - Model: gemini-3.8-flash, claude-sonnet-4-6, ...     │
- │  - Reasoning Effort: low | medium | high               │
- │  - Mode: accept-edits                                  │
- │  - Headless Permissions: auto-approved                 │
- └──────────┬─────────────────────────────────────────────┘
-            │  Local Webhook (HTTP :7799)
-            ▼
- ┌────────────────────────────────────────────────────────┐
- │     Local HTTP Server (http://127.0.0.1:7799)         │
- │  - /send-file?file=path -> Telegram SendDocument       │
- │  - /send-msg?text=msg   -> Telegram SendMessage        │
- └────────────────────────────────────────────────────────┘
+ │            Antigravity Bypass CLI (cli.js)             │
+ └──────────────────────────┬─────────────────────────────┘
+                            │
+            ┌───────────────┴───────────────┐
+            ▼                               ▼
+ ┌──────────────────────┐        ┌──────────────────────┐
+ │   Detector & Patch   │        │     Network & DNS    │
+ │ (src/bypass/patch.js)│        │(src/bypass/dns-bypass)
+ └──────────┬───────────┘        └──────────┬───────────┘
+            │                               │
+            ├─ ANTIGRAVITY IDE              ├─ VPN Auto-detection
+            ├─ ANTIGRAVITY 2.0              ├─ Native VPN Tunnel Route
+            ├─ ANTIGRAVITY CLI              └─ SmartDNS (VPN o'chiq bo'lsa)
+            ├─ AGY BIN (.gemini)
+            └─ VS Code Extensions
 ```
 
 ---
 
 ## ⚙️ Asosiy Modullar
 
-### 1. `server.js` Asosiy Dvigateli
-- **Telegram Bot Klienti:** `node-telegram-bot-api` orqali xabarlarni qabul qiladi va HTML formatida xatosiz javoblarni qaytaradi.
-- **Xavfsizlik qatlami:** Faqat `.env` dagi `ADMIN_CHAT_ID` bilan cheklangan. Begona foydalanuvchilar zudlik bilan rad etiladi.
-- **AGY CLI Binarini Avtomatik Aniqlash:** `C:\Users\<user>\AppData\Local\agy\bin\agy.exe` yoki tizim `PATH`idan qidiradi.
+### 1. `cli.js` (Interaktiv Boshqaruv Markazi)
+- Kompyuterdagi barcha Antigravity o'rnatilmalarini aniqlaydi.
+- "Sizda borlari" ro'yxatini 1 dan boshlab tartib bilan ko'rsatadi.
+- Tanlangan raqam bo'yicha alohida yoki barchasini birvarakayiga patch qiladi.
 
-### 2. Multi-Session Manager (Sessiyalar Boshqaruvi)
-- Har bir sessiya o'z nomi, alohida ishchi jildi (`cwd`), tanlangan AI modeli, ishlash tezligi (`effort`) va buyruqlar tarixiga ega.
-- Ma'lumotlar avtomatik tarzda `data/sessions.json` faylida saqlanadi. Bot o'chib-yonsa ham sessiyalar holati tiklanadi.
+### 2. `src/bypass/patch.js` (Binar va JS Patch Engine)
+- Binar bayt darajasidagi moslashtirish: `ineligible` → `inexigible` va `https_proxy` → `AG_LS_PROXY`.
+- IDE `main.js` geo-check funksiyalarini zararsizlantirish.
+- Har bir fayl uchun xavfsiz atomik yozish va zaxira (`.ag_backup`) yaratish.
 
-### 3. 5-Hour Rolling Limit Tracker
-- Har bir yuborilgan buyruqni `data/limits.json` faylida vaqt tamg'asi (`timestamp`) bilan qayd qiladi.
-- Oxirgi 5 soatlik oraliqdagi barcha so'rovlarni hisoblab chiqadi.
-- Eng birinchi so'rov qachon oynadan chiqib ketishini va limit qachon bo'shashini soniyasigacha ko'rsatib turadi.
+### 3. `src/bypass/dns-bypass.js` (SmartDNS & VPN Moslashtiruvchisi)
+- **VPN Faol bo'lsa:** Hech qanday NRPT qoidalarini kiritmaydi va mahalliy adapterga bog'lanmaydi; trafikni VPN orqali to'g'ri o'tishini ta'minlaydi.
+- **VPN Nofaol bo'lsa:** Mahalliy provayder blokirovkasini aylanib o'tish uchun SmartDNS va NRPT qoidalarini faollashtiradi.
 
-### 4. Mahalliy HTTP Webhook Server (`127.0.0.1:7799`)
-- AGY agenti bajarilayotgan paytda `curl` orqali fayl yoki xabar yuborish imkoniyatiga ega.
-- `/send-file`: Masalan agent skrinshot yoki tayyor fayl yaratganda Telegramga to'g'ridan-to'g'ri yuboradi.
-- `/send-msg`: Katta loyihalarda oraliq holat xabarlarini yuborish uchun xizmat qiladi.
-
----
-
-## 🔒 Xavfsizlik Tamoyillari
-1. **Admin Autentifikatsiyasi:** Barcha xabarlar va callback query'lar `isAdmin(chatId)` orqali tekshiriladi.
-2. **Sirli Ma'lumotlar:** `.env` va `data/*.json` fayllari `.gitignore` ga kiritilgan bo'lib, Git omboriga chiqib ketmaydi.
-3. **Localhost Cheklovi:** Webhook server faqat `127.0.0.1` manziliga ulanadi, tashqi tarmoqdan kirish imkonsiz.
+### 4. `src/bypass/watchdog.js` (Avto-nazoratchi)
+- Antigravity yangilanganida binar fayllarni kuzatadi va ularni avtomatik qayta patch qiladi.
