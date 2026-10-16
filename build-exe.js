@@ -40,7 +40,8 @@ if (fs.existsSync(DIST_DIR)) {
   fs.mkdirSync(DIST_DIR, { recursive: true });
 }
 
-// 2. pkg vositasini topish
+// 2. Resolve pkg entrypoint directly to avoid shell: true security deprecation warning [DEP0190]
+const localPkgScript = path.join(ROOT_DIR, 'node_modules', 'pkg', 'lib-es5', 'bin.js');
 const localPkgBin = path.join(
   ROOT_DIR,
   'node_modules',
@@ -48,16 +49,22 @@ const localPkgBin = path.join(
   process.platform === 'win32' ? 'pkg.cmd' : 'pkg'
 );
 
-let pkgCmd = 'npx';
-let pkgArgs = ['pkg'];
+let runCmd = process.execPath;
+let runArgs = [];
 
-if (fs.existsSync(localPkgBin)) {
-  pkgCmd = localPkgBin;
-  pkgArgs = [];
+if (fs.existsSync(localPkgScript)) {
+  runCmd = process.execPath;
+  runArgs = [localPkgScript];
+} else if (fs.existsSync(localPkgBin)) {
+  runCmd = localPkgBin;
+  runArgs = [];
+} else {
+  runCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  runArgs = ['pkg'];
 }
 
 const buildArgs = [
-  ...pkgArgs,
+  ...runArgs,
   'cli.js',
   '--targets', 'node18-win-x64',
   '--output', OUTPUT_EXE,
@@ -65,11 +72,11 @@ const buildArgs = [
 ];
 
 console.log('[1/2] Packaging all modules into a standalone .EXE...');
-console.log(`      Command: ${pkgCmd} ${buildArgs.join(' ')}\n`);
+console.log(`      Command: ${path.basename(runCmd)} ${buildArgs.join(' ')}\n`);
 
-const result = spawnSync(pkgCmd, buildArgs, {
+const result = spawnSync(runCmd, buildArgs, {
   stdio: 'inherit',
-  shell: true,
+  shell: false,
   cwd: ROOT_DIR,
 });
 
