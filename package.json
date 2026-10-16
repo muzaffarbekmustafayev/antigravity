@@ -2,7 +2,7 @@
   "name": "antigravity-bypass",
   "version": "2.0.0",
   "description": "Google Antigravity regional bypass, binary patcher, and DNS unlocker",
-  "main": "patcher.js",
+  "main": "cli.js",
   "bin": {
     "antigravity-bypass": "cli.js"
   },
@@ -13,9 +13,24 @@
     "restore": "node cli.js restore",
     "clean": "node clean.js",
     "clean:hosts": "clean-hosts.bat",
-    "build": "node -c cli.js patcher.js src/bypass/index.js src/bypass/patch.js src/bypass/dns-bypass.js src/bypass/watchdog.js src/network.js src/config.js src/utils.js"
+    "build:exe": "node build-exe.js",
+    "build": "node -c cli.js patcher.js src/logger.js src/bypass/index.js src/bypass/patch.js src/bypass/dns-bypass.js src/bypass/watchdog.js src/network.js src/config.js src/utils.js src/ui/colors.js src/ui/views.js src/ui/handlers.js src/bypass/patcher/constants.js src/bypass/patcher/process.js src/bypass/patcher/binary.js src/bypass/patcher/ide.js src/bypass/patcher/detector.js src/bypass/dns/constants.js src/bypass/dns/packet.js src/bypass/dns/forwarder.js src/bypass/dns/egress.js src/bypass/dns/relay.js src/bypass/dns/nrpt.js src/bypass/dns/hosts.js"
+  },
+  "pkg": {
+    "scripts": [
+      "src/**/*.js",
+      "cli.js"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
   },
   "dependencies": {
     "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^5.9.0",
+    "pkg": "^5.8.1"
   }
 }

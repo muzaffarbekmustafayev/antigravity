@@ -1,26 +1,50 @@
 # Dependencies
 node_modules/
+.pnp
+.pnp.js
 
-# Environment files & Secrets (CRITICAL: DO NOT COMMIT)
+# Build Outputs & Binaries
+dist/
+build/
+bin/
+*.exe
+*.zip
+*.tar.gz
+*.tgz
+
+# Environment & Secrets (CRITICAL: DO NOT COMMIT)
 .env
 .env.local
 .env.*.local
 *.env
 
-# Operating System files
+# Antigravity Temp & Backups
+*.ag_backup
+*.ag_meta.json
+*.agtmp
+*.agtmp.*
+.agtmp*
+
+# OS Generated Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# IDE & Editor files
+# IDE & Editor Directories
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
 *.swp
 *.swo
+*~
 
-# Log files
+# Logs & Diagnostics
 logs/
 *.log
 npm-debug.log*
@@ -28,9 +52,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Temp & Cache
+# Caches & Temporary Directories
 .temp/
 tmp/
+temp/
 .cache/
 data/
 alternatives/
+.eslintcache
+.stylelintcache

@@ -1,85 +1,116 @@
 /**
- * 🌐 Network & VPN Auto-Detector Module
- * SOTA VPN va umumiy tarmoq holatini avtomatik aniqlaydi,
- * IP o'zgarishlarini kuzatadi va ulanishlarni to'g'ri marshrutlaydi.
+ * 🌐 Network Connectivity & IP Detector Module
+ * Tarmoq holati, tashqi IP va geolokatsiyani aniqlash.
  */
 
 'use strict';
 
 const https = require('https');
-const http  = require('http');
 
 let _cachedIpInfo = null;
 let _lastCheckTime = 0;
 let _isChecking = false;
 
 /**
- * Tashqi IP va geolokatsiyani aniqlash (tezkor kesh bilan)
+ * Tashqi IP va geolokatsiyani aniqlash (bir nechta ishonchli provayderlar va kesh bilan)
  */
-function fetchCurrentIp(timeoutMs = 4000) {
+function fetchCurrentIp(timeoutMs = 3500) {
   return new Promise((resolve) => {
+    let finished = false;
+    const finish = (result) => {
+      if (!finished) {
+        finished = true;
+        resolve(result);
+      }
+    };
+
     const req = https.get('https://ipinfo.io/json', {
-      headers: { 'User-Agent': 'curl/7.68.0' },
+      headers: {
+        'User-Agent': 'curl/7.68.0',
+        'Accept': 'application/json'
+      },
       timeout: timeoutMs,
     }, (res) => {
+      if (res.statusCode !== 200) {
+        fallbackIpify(timeoutMs).then(finish);
+        res.resume(); // discard data to free socket
+        return;
+      }
       let data = '';
-      res.on('data', chunk => data += chunk);
+      res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
         try {
           const info = JSON.parse(data);
-          const isVpnCountry = info.country !== 'RU' && info.country !== 'UZ';
-          resolve({
-            ok: true,
-            ip: info.ip,
-            country: info.country || 'NL',
-            city: info.city,
-            org: info.org,
-            isVpn: isVpnCountry || /sota|vpn|wireguard|cloud|hosting|datacenter/i.test(info.org || ''),
-          });
-        } catch (_) {
-          resolve({ ok: false, error: 'JSON parse error' });
-        }
+          if (info && info.ip) {
+            finish({
+              ok: true,
+              ip: String(info.ip).trim(),
+              country: info.country || 'UZ',
+              city: info.city || '',
+              org: info.org || '',
+            });
+            return;
+          }
+        } catch (_) {}
+        fallbackIpify(timeoutMs).then(finish);
       });
     });
 
     req.on('error', () => {
-      // Zaxira: SOTA-ning o'z servisi
-      fallbackAccessly(timeoutMs).then(resolve);
+      fallbackIpify(timeoutMs).then(finish);
     });
 
     req.on('timeout', () => {
       req.destroy();
-      fallbackAccessly(timeoutMs).then(resolve);
+      fallbackIpify(timeoutMs).then(finish);
     });
   });
 }
 
-function fallbackAccessly(timeoutMs) {
+function fallbackIpify(timeoutMs = 3000) {
   return new Promise((resolve) => {
-    const req = https.get('https://ip.accessly.app', {
+    let finished = false;
+    const finish = (result) => {
+      if (!finished) {
+        finished = true;
+        resolve(result);
+      }
+    };
+
+    const req = https.get('https://api.ipify.org?format=json', {
       headers: { 'User-Agent': 'Mozilla/5.0' },
       timeout: timeoutMs,
     }, (res) => {
+      if (res.statusCode !== 200) {
+        finish({ ok: false, error: `HTTP ${res.statusCode}` });
+        res.resume();
+        return;
+      }
       let data = '';
-      res.on('data', c => data += c);
+      res.on('data', c => { data += c; });
       res.on('end', () => {
         try {
           const j = JSON.parse(data);
-          resolve({
-            ok: true,
-            ip: j.ip,
-            country: 'UNKNOWN',
-            city: '',
-            org: '',
-            isVpn: true,
-          });
-        } catch (_) {
-          resolve({ ok: false, error: 'Fallback failed' });
-        }
+          if (j && j.ip) {
+            finish({
+              ok: true,
+              ip: String(j.ip).trim(),
+              country: 'UNKNOWN',
+              city: '',
+              org: '',
+            });
+            return;
+          }
+        } catch (_) {}
+        finish({ ok: false, error: 'Fallback JSON parse error' });
       });
     });
-    req.on('error', (e) => resolve({ ok: false, error: e.message }));
-    req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'Timeout' }); });
+
+    req.on('error', (e) => finish({ ok: false, error: e.message }));
+    req.on('timeout', () => {
+      req.destroy();
+      finish({ ok: false, error: 'Fallback timeout' });
+    });
   });
 }
 
@@ -98,19 +129,15 @@ async function getNetworkStatus(force = false) {
 
   _isChecking = true;
   try {
-    const res = await fetchCurrentIp(3500);
-    if (res.ok) {
-      const prevVpn = _cachedIpInfo ? _cachedIpInfo.isVpn : null;
+    const res = await fetchCurrentIp(3000);
+    if (res && res.ok && res.ip) {
+      const prevIp = _cachedIpInfo ? _cachedIpInfo.ip : null;
       _cachedIpInfo = res;
       _lastCheckTime = Date.now();
 
-      // Agar VPN holati o'zgargan bo'lsa xabar beramiz
-      if (prevVpn !== null && prevVpn !== res.isVpn) {
-        if (res.isVpn) {
-          console.log(`\n🛡️ [VPN FAOL]: SOTA VPN ulandi! IP: ${res.ip} (${res.country}, ${res.city || ''})`);
-        } else {
-          console.log(`\n⚠️ [VPN O'CHIQ]: Mahalliy tarmoqqa o'tildi. IP: ${res.ip} (${res.country})`);
-        }
+      // Inform if public IP address changed
+      if (prevIp !== null && prevIp !== res.ip) {
+        console.log(`\n🌐 [NETWORK]: IP updated: ${res.ip} (${res.country}, ${res.city || ''})`);
       }
     }
   } catch (_) {}
@@ -118,7 +145,7 @@ async function getNetworkStatus(force = false) {
     _isChecking = false;
   }
 
-  return _cachedIpInfo || { ok: false, ip: 'Noma\'lum', country: 'RU', isVpn: false };
+  return _cachedIpInfo || { ok: false, ip: 'Unknown', country: 'UNKNOWN', org: '' };
 }
 
 /**
@@ -129,7 +156,7 @@ function startNetworkWatcher(intervalMs = 10000, onChangeCallback = null) {
   const timer = setInterval(async () => {
     const prev = _cachedIpInfo ? { ..._cachedIpInfo } : null;
     const curr = await getNetworkStatus(true);
-    if (prev && curr.ok && prev.ok && (prev.ip !== curr.ip || prev.isVpn !== curr.isVpn)) {
+    if (prev && curr && curr.ok && prev.ok && prev.ip !== curr.ip) {
       if (typeof onChangeCallback === 'function') {
         onChangeCallback(curr, prev);
       }

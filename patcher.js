@@ -5,16 +5,16 @@
 const bypass = require('./src/bypass');
 
 (async () => {
-  console.log('⚡ Antigravity to\'liq patch boshlanmoqda (barcha hududlar uchun)...');
+  console.log('⚡ Starting Antigravity regional unlock and binary patch...');
   try {
     const res = await bypass.enable({ force: true });
-    console.log(`✅ Patch yakunlandi.`);
-    console.log(`   Binary fayllar: ${res.patch.ok} ta`);
-    console.log(`   IDE / JS fayllar: ${res.patch.jsPatched || 0} ta`);
+    console.log(`✅ Patch completed successfully.`);
+    console.log(`   Binary files: ${res.patch.ok}`);
+    console.log(`   IDE / JS files: ${res.patch.jsPatched || 0}`);
     if (res.dns && res.dns.ok) {
-      console.log('   DNS Bypass: faol');
+      console.log('   SmartDNS Bypass: Active');
     }
   } catch (err) {
-    console.error('❌ Xatolik:', err.message);
+    console.error('❌ Error:', err.message);
   }
 })();

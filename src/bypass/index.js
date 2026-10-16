@@ -48,7 +48,7 @@ async function enable(options = {}) {
   if (config.SAFE_MODE && !config.ENABLE_SYSTEM_BYPASS && !options.force) {
     return {
       patch: { ok: 0, failed: 0, proxyVar: 0, errors: ['SAFE_MODE: Tizim sozlamalarini himoyalash uchun bypass bloklangan.'] },
-      dns: { ok: false, vpnActive: false, ifName: null, error: 'SAFE_MODE faol' }
+      dns: { ok: false, ifName: null, error: 'SAFE_MODE faol' }
     };
   }
 
@@ -101,7 +101,7 @@ function disable(force = false) {
 /**
  * Current status snapshot.
  * @returns {{
- *   dns: { relayRunning: boolean, nrptApplied: boolean, vpnActive: boolean|null, ifName: string|null },
+ *   dns: { relayRunning: boolean, nrptApplied: boolean, ifName: string|null },
  *   watchdog: boolean,
  *   isEnabled: boolean,
  * }}

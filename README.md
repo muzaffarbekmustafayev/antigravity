@@ -1,74 +1,93 @@
-<div align="center">
-
 # 🚀 Antigravity Bypass & Regional Unlocker
 
-**Google Antigravity (AGY), Antigravity 2.0 va Antigravity IDE uchun mintaqaviy cheklovlarni olib tashlash, binar patch va aqlli tarmoq moslashtiruvchisi.**
+<div align="center">
+
+**High-performance regional bypass, binary patcher, and SmartDNS unlocker for Google Antigravity (AGY), Antigravity 2.0, and Antigravity IDE.**
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
-[![Google Antigravity](https://img.shields.io/badge/Antigravity-Unlocked-orange.svg)](https://antigravity.google)
-[![VPN Friendly](https://img.shields.io/badge/VPN-SOTA%20Compatible-blue.svg)](https://github.com)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-blue.svg)](https://microsoft.com/windows)
+[![Antigravity](https://img.shields.io/badge/Antigravity-Unlocked-orange.svg)](https://antigravity.google)
+[![No VPN Needed](https://img.shields.io/badge/Network-No%20VPN%20Needed-brightgreen.svg)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
----
-
-### 🌐 Select Language / Tilni tanlang / Выберите язык
-[**🇺🇿 O'zbekcha**](#-ozbekcha) | [**🇺🇸 English**](#-english) | [**🇷🇺 Русский**](#-русский)
-
----
 
 </div>
 
-<a name="ozbekcha"></a>
-## 🇺🇿 O'zbekcha
+---
 
-### 🌟 Umumiy Ma'lumot
-**Antigravity Bypass & Regional Unlocker** — bu Google Antigravity (AGY), Antigravity 2.0 va Antigravity IDE vositalarini mintaqaviy cheklovlar (`User location is not supported`, `ineligible`, `geo-block`) bo'lgan hududlarda to'siqsiz ishlatish uchun yaratilgan kuchli yechimdir.
+## 🌟 Overview
 
-Dastur kompyuterdagi barcha mavjud o'rnatilmalarni avtomatik qidirib topadi, **"Sizda borlari"** ro'yxatini chiqaradi va xohlagan o'rnatilmani raqami bo'yicha alohida yoki barchasini birvarakayiga patch qilish imkonini beradi.
+**Antigravity Bypass & Regional Unlocker** is an all-in-one developer tool engineered to eliminate geographic restrictions (`User location is not supported`, `ineligible_tiers`, `geo-block`) across the entire Google Antigravity ecosystem.
 
-### ✨ Asosiy Imkoniyatlar
-- **🔍 Avtomatik O'rnatilmalarni Qidirish (Discovery):**
+It operates **completely standalone directly over your local internet connection without requiring a commercial VPN**. It achieves this through a combination of in-place byte-level binary patching, balanced JavaScript AST injection, and low-latency Windows NRPT (Name Resolution Policy Table) SmartDNS routing.
+
+---
+
+## ✨ Key Features
+
+- **🔍 Automatic Multi-Target Discovery:**
+  Automatically locates all Antigravity installations on your machine:
   - `ANTIGRAVITY IDE` (`main.js` + `language_server_windows_x64.exe`)
   - `ANTIGRAVITY 2.0` (`language_server.exe`)
   - `ANTIGRAVITY CLI` (`agy.exe`)
   - `AGY BIN (.gemini)` (`agy.exe`)
-  - `ANTIGRAVITY VS CODE EXTENSION` (kengaytmalar)
-- **🔢 1 dan Boshlanuvchi "Sizda borlari" Ro'yxati:**
-  - Kompyuterda topilgan har bir o'rnatilma raqamlanadi (1, 2, 3...)
-  - Aniq holat: Target fayl yo'li, patch holati (`[PATCHED ✓]` / `[NOT PATCHED ✗]`), fayl hajmi va versiyasi ko'rsatiladi.
-- **⚡ Tanlov Asosida Patch Qilish:**
-  - Istalgan o'rnatilma raqamini kiritib, faqat shuning o'zini patch qilish.
-  - Yoki `[A]` bosib barchasini birdaniga patch qilish.
-- **🛡️ VPN Bilan Mukammal Hamohanglik (SOTA VPN va boshqalar):**
-  - VPN yoqilgan bo'lsa, tarmoq avtomatik aniqlanadi va provayderga majburiy bog'lanishlar olib tashlanadi.
-  - VPN o'chiq bo'lsa, xavfsiz SmartDNS bypass marshruti ishga tushadi.
-- **↩️ Asl Holatiga Qaytarish (Restore / Unpatch):**
-  - Barcha o'zgartirishlarni istalgan paytda bir tugma bilan bekor qilish va zaxira nusxalarini tiklash.
-- **🛡️ Watchdog (Avto-nazorat):**
-  - Google Antigravity avtomatik yangilanganida, fon rejimida uni darhol qayta patch qilish.
+  - `ANTIGRAVITY VS CODE / CURSOR / WINDSURF EXTENSIONS`
+- **🔢 Interactive Numbered Selection:**
+  Lists all detected installations with target file paths, patch state (`[PATCHED ✓]` / `[NOT PATCHED ✗]`), file sizes, and versions.
+- **⚡ Selective or Bulk Patching:**
+  Patch any specific installation by its number, or press `[A]` to patch all installations in one operation.
+- **🌐 SmartDNS & Windows NRPT Engine:**
+  Routes Antigravity Google API hostnames through high-speed DoH/UDP providers via a loopback relay (`127.0.0.53:53`) with zero DNS leaks and automated hosts fallback.
+- **🛡️ Bit-Exact Atomic Backups:**
+  Creates `.ag_backup` copies prior to modifying any file. Restores can be triggered at any time with option `[R]` or `antigravity-bypass restore`.
+- **🔄 Auto-Repatch Watchdog Daemon:**
+  Background monitor (`[W]` or `antigravity-bypass watchdog`) that watches binary file modification times (`mtime`) and automatically reapplies patches if Antigravity updates itself.
+- **📦 Single Standalone Executable (.EXE):**
+  Packaged with `pkg` into a single standalone `antigravity-bypass.exe` requiring no Node.js installation on target systems.
 
 ---
 
-### 🚀 O'rnatish va Ishga Tushirish
+## 🚀 Quick Start
 
-#### 1. Talablar
-- [Node.js](https://nodejs.org/) (v18 yoki undan yuqori)
-- Windows 10 / 11
+### Option 1: Standalone .EXE (No Node.js Required)
 
-#### 2. O'rnatish
+1. Download or build `dist/antigravity-bypass.exe`.
+2. Double-click `antigravity-bypass.exe` (automatically requests Administrator elevation via UAC).
+3. Follow the interactive menu on screen.
+
+### Option 2: Running via Node.js
+
+#### Prerequisites
+- [Node.js](https://nodejs.org/) (v18.0.0 or higher)
+- Windows 10 or 11 (64-bit)
+- PowerShell 5.1+ (built into Windows)
+
+#### Installation & Launch
 ```bash
+# Clone the repository
 git clone https://github.com/muzaffarbekmustafayev/antigravity.git
 cd antigravity
-npm install
-```
 
-#### 3. Ishga Tushirish
-```bash
+# Install dependencies
+npm install
+
+# Launch interactive CLI
 npm start
 ```
-Ishga tushirilganda tizim avtomatik skanerlash o'tkazadi va quyidagi qulay menyuni ko'rsatadi:
+
+---
+
+## 🖥️ Interactive CLI Interface
+
+When launched, the CLI runs an instant hardware and software scan:
 
 ```text
+╔══════════════════════════════════════════════════════════╗
+║         🚀  ANTIGRAVITY BYPASS & UNLOCKER  🚀            ║
+║        Complete Regional Restrictions Bypass             ║
+╚══════════════════════════════════════════════════════════╝
+
+Network: 92.63.65.94 (Internet) 🌐 [RU, Tomsk]  [Admin: Yes ✓]
+
 ] Searching for installations...
   ─ ANTIGRAVITY IDE ───────────────────────────────
       Target:  C:\Users\...\Antigravity IDE\resources\app\out\main.js
@@ -84,92 +103,109 @@ Ishga tushirilganda tizim avtomatik skanerlash o'tkazadi va quyidagi qulay menyu
       Version: 2.23.1
       Size:    161.3 MB
 
-  ─ ANTIGRAVITY CLI ───────────────────────────────
-      Target:  C:\Users\...\AppData\Local\agy\bin\agy.exe
-      Status:  found
-      Patch:   already patched
-      Version: 1.3.5
-      Size:    184.9 MB
-
-  ─ AGY BIN (.gemini) ─────────────────────────────
-      Target:  C:\Users\...\.gemini\bin\agy.exe
-      Status:  found
-      Patch:   already patched
-      Version: 1.3.3
-      Size:    184.2 MB
-
-  ─ ANTIGRAVITY VS CODE EXTENSION ─────────────────
-      Target:  Not found
-      Status:  not found
-
-════════════════════════════════════════════════════════════
-📦 SIZDA BORLARI (Mavjud o'rnatilmalar):
-════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════
+  📦 DETECTED INSTALLATIONS:
+═══════════════════════════════════════════════════════════
 
   [1] ANTIGRAVITY IDE  [PATCHED ✓]
-  [2] ANTIGRAVITY 2.0  [PATCHED ✓]
-  [3] ANTIGRAVITY CLI  [PATCHED ✓]
-  [4] AGY BIN (.gemini)  [PATCHED ✓]
+      Path:    C:\Users\...\Antigravity IDE\resources\app\out\main.js
+      Info:    Version: 2.5.5  │  Size: 14.3 MB
 
-────────────────────────────────────────────────────────────
-⚡ Buyruqlar:
-  [1 - 4]  Tanlangan o'rnatilmani patch qilish
-  [A]      BARCHASINI birvarakayiga patch qilish (Tavsiya etiladi)
-  [R]      Asliga qaytarish (Restore / Unpatch)
-  [S]      Status & Diagnostika (Tarmoq, DNS, NRPT)
-  [W]      Watchdog avto-patch (fon rejimida)
-  [Q]      Chiqish
-────────────────────────────────────────────────────────────
-Tanlovingizni kiriting [1-4, A, R, S, W, Q]: 
+  [2] ANTIGRAVITY 2.0  [PATCHED ✓]
+      Path:    C:\Users\...\antigravity\resources\bin\language_server.exe
+      Info:    Version: 2.23.1  │  Size: 161.3 MB
+
+───────────────────────────────────────────────────────────
+  ⚡ Available Commands:
+    [1 - 2]  Patch selected installation
+    [A]      Patch ALL detected installations (Recommended)
+    [R]      Restore original files (Restore / Unpatch)
+    [S]      System status & diagnostics (Network, DNS, NRPT)
+    [W]      Start Watchdog daemon (Auto-repatch background observer)
+    [Q]      Quit
+───────────────────────────────────────────────────────────
 ```
 
 ---
 
-### 🛠️ Qo'shimcha Buyruqlar
+## ⌨️ Command Line Usage
 
-| Buyruq | Vazifasi |
+The tool also supports headless and automated script execution:
+
+| Command | Description |
 | :--- | :--- |
-| `npm start` | Interaktiv boshqaruv menyusini ochish |
-| `npm run patch` | Barcha o'rnatilmalarni to'g'ridan-to'g'ri patch qilish |
-| `npm run status` | Tarmoq, VPN va fayllar holatini tekshirish |
-| `npm run restore` | Barcha patchlarni bekor qilish va asl nusxani tiklash |
-| `npm run clean:hosts` | Windows NRPT va hosts qoidalarini tozalash |
+| `npm start` / `node cli.js` | Launches the interactive terminal menu |
+| `npm run status` / `node cli.js status` | Prints network diagnostics, installation states, and NRPT status |
+| `node cli.js patch` | Patches all detected Antigravity installations and sets up SmartDNS |
+| `node cli.js patch 1` | Patches only installation #1 from the detected list |
+| `node cli.js restore` | Restores all files from backups and removes NRPT rules |
+| `node cli.js watchdog` | Starts the background daemon to watch for app updates |
+| `npm run clean` | Cleans temporary `.agtmp` files and build caches |
+| `npm run build:exe` | Compiles the project into `dist/antigravity-bypass.exe` |
 
 ---
 
-<a name="english"></a>
-## 🇺🇸 English
+## 🏛️ Architecture & How It Works
 
-### 🌟 Overview
-**Antigravity Bypass & Regional Unlocker** is a dedicated tool for bypassing geographic restrictions (`User location is not supported`, `ineligible`) across Google Antigravity (AGY), Antigravity 2.0, and Antigravity IDE.
+```text
+┌────────────────────────────────────────────────────────┐
+│            Antigravity Bypass CLI (cli.js)             │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+           ┌───────────────┴───────────────┐
+           ▼                               ▼
+┌──────────────────────┐        ┌──────────────────────┐
+│   Detector & Patch   │        │     Network & DNS    │
+│ (src/bypass/patch.js)│        │(src/bypass/dns-bypass)
+└──────────┬───────────┘        └──────────┬───────────┘
+           │                               │
+           ├─ Chunked 4MB Signature Scan   ├─ Validated DNS Race (NOERROR/ANCOUNT)
+           ├─ Atomic File Write & Backup   ├─ Loopback SmartDNS (127.0.0.53:53)
+           ├─ Balanced JS AST Call Hook    ├─ Non-Interfering Windows NRPT Rules
+           └─ Multi-Target Detection       └─ Safe /etc/hosts Fallback
+```
 
-It automatically discovers all installations on your system, displays a clean numbered list starting from 1 ("Available on your machine"), and allows you to selectively patch individual targets or unlock all of them at once.
-
-### ✨ Features
-- **Automatic Target Discovery:** Detects IDE, Antigravity 2.0, CLI, and extensions.
-- **Numbered Selection (1 to N):** Choose any specific installation to patch or revert.
-- **VPN Compatible (SOTA VPN):** Automatically respects VPN routes without interfering or leaking physical ISP traffic.
-- **Instant Restore:** Easily revert any or all binaries to original backups.
-- **Watchdog Mode:** Keeps binaries patched even across background Google updates.
-
----
-
-<a name="русский"></a>
-## 🇷🇺 Русский
-
-### 🌟 Описание
-**Antigravity Bypass & Regional Unlocker** — инструмент для обхода региональных ограничений (`User location is not supported`, `ineligible`) для Google Antigravity (AGY), Antigravity 2.0 и Antigravity IDE.
-
-Автоматически находит все установленные версии на компьютере, выводит пронумерованный список от 1 («То, что у вас есть») и позволяет пропатчить как конкретную установку, так и все сразу.
-
-### ✨ Возможности
-- **Автоматический поиск:** Сканирует Antigravity IDE, Antigravity 2.0, CLI (`agy.exe`) и плагины.
-- **Выбор по номеру [1 - N]:** Патчинг выбранного компонента или всех сразу `[A]`.
-- **Полная совместимость с VPN (SOTA VPN):** Автоматически использует туннель VPN без конфликтов NRPT.
-- **Откат к оригиналу [R]:** Восстановление оригинальных файлов из резервных копий в один клик.
+For comprehensive engineering details on byte replacement signatures, DNS wire protocol parsing, and concurrency handling, refer to [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
-<div align="center">
-Antigravity Bypass & Unlocker • Built for uninterrupted AI developer workflows.
-</div>
+## 🛠️ Building the Standalone .EXE
+
+To compile the entire codebase (including all Node.js runtime code and submodules) into a single Windows executable:
+
+```bash
+npm run build:exe
+```
+
+The output binary will be generated at:
+```text
+dist/antigravity-bypass.exe (~36 MB)
+```
+
+This executable has zero external dependencies and can be copied to any compatible 64-bit Windows PC.
+
+---
+
+## ❓ Troubleshooting
+
+### Administrator Rights
+- **Issue:** `Administrator privileges required` notification appears.
+- **Solution:** Right-click the terminal or `antigravity-bypass.exe` and select **"Run as administrator"**. Administrator rights are mandatory for Windows NRPT rules and loopback DNS socket binding (`127.0.0.53:53`).
+
+### Windows Home Edition
+- Windows Home editions do not support Group Policy NRPT cmdlets (`Add-DnsClientNrptRule`).
+- **Solution:** The tool automatically detects this and falls back to atomic `hosts` file IP pinning (`C:\Windows\System32\drivers\etc\hosts`).
+
+### Resetting DNS & Network Rules
+To manually revert all DNS rules back to Windows defaults:
+```bash
+npm run restore
+# or run the emergency script:
+clean-hosts.bat
+```
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
