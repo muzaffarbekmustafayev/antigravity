@@ -26,14 +26,26 @@ const ROOT_DIR = __dirname;
 const DIST_DIR = path.join(ROOT_DIR, 'dist');
 const OUTPUT_EXE = path.join(DIST_DIR, 'antigravity-bypass.exe');
 
-// 1. dist papkasini tozalab tayyorlash (faqat bitta .exe bo'lishi uchun)
+// 1. Terminate any running instances of the executable to avoid Windows EPERM file locks
+if (process.platform === 'win32') {
+  try {
+    const { execFileSync } = require('child_process');
+    try {
+      execFileSync('taskkill.exe', ['/F', '/IM', 'antigravity-bypass.exe'], { stdio: 'ignore', windowsHide: true });
+    } catch (_) {}
+    try {
+      execFileSync('wmic.exe', ['process', 'where', "name='antigravity-bypass.exe'", 'call', 'terminate'], { stdio: 'ignore', windowsHide: true });
+    } catch (_) {}
+  } catch (_) {}
+}
+
+// 2. Prepare dist directory and clean old files
 if (fs.existsSync(DIST_DIR)) {
   try {
     const files = fs.readdirSync(DIST_DIR);
     for (const f of files) {
-      if (f !== 'antigravity-bypass.exe') {
-        fs.unlinkSync(path.join(DIST_DIR, f));
-      }
+      const p = path.join(DIST_DIR, f);
+      try { fs.unlinkSync(p); } catch (_) {}
     }
   } catch (_) {}
 } else {
