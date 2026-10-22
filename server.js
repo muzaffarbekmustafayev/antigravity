@@ -180,7 +180,7 @@ app.get('/api/download/exe', (req, res) => {
 
 app.get('/api/scripts/:name', (req, res) => {
   const name = req.params.name;
-  const allowed = ['clean-hosts.bat', 'fix-nrpt.ps1', 'fix-server-crash.bat'];
+  const allowed = ['clean-hosts.bat', 'fix-nrpt.ps1', 'fix-server-crash.bat', 'russia-unlock.bat'];
   if (!allowed.includes(name)) {
     return res.status(404).send('Not found');
   }

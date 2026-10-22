@@ -62,7 +62,7 @@ const PROVIDERS = [
   },
 ];
 
-const DEFAULT_FALLBACK_IPS = ['91.132.224.167', '103.137.248.145'];
+const DEFAULT_FALLBACK_IPS = ['157.22.178.37', '80.74.30.162'];
 
 module.exports = {
   AG_HOSTNAMES,
