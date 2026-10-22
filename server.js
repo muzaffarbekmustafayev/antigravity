@@ -180,6 +180,30 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`🚀 Antigravity Bypass Web Dashboard running at http://${HOST}:${PORT}`);
-});
+let _serverInstance = null;
+
+function startWebServer(port = PORT, host = HOST, openInBrowser = false) {
+  if (_serverInstance) return _serverInstance;
+  try {
+    _serverInstance = app.listen(port, host, () => {
+      console.log(`🚀 Antigravity Bypass Web Dashboard: http://localhost:${port}`);
+      if (openInBrowser && process.platform === 'win32' && !process.env.CI) {
+        try {
+          require('child_process').exec(`start http://localhost:${port}`);
+        } catch (_) {}
+      }
+    });
+    _serverInstance.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`ℹ Web Dashboard port ${port} da allaqachon faol: http://localhost:${port}`);
+      }
+    });
+  } catch (_) {}
+  return _serverInstance;
+}
+
+if (require.main === module) {
+  startWebServer(PORT, HOST, true);
+}
+
+module.exports = { app, startWebServer };

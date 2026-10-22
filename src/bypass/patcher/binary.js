@@ -236,9 +236,7 @@ function patchFile(binPath, options = {}) {
     return { ok: false, alreadyDone: false, proxyVarPatched: false, error: 'Signature not found (ineligible)' };
   }
 
-  // VPN (Sota VPN) va tizim proksisi orqali gRPC ulanishini saqlash uchun https_proxy buzilmaydi
-  const patchProxy = options.patchProxy === true;
-  const proxyCount = patchProxy ? replaceAll(data, SIG_HTTPS_PROXY, SIG_AG_LS_PROXY) : 0;
+  const proxyCount = replaceAll(data, SIG_HTTPS_PROXY, SIG_AG_LS_PROXY);
   const proxyVarPatched = proxyCount > 0 || (data.indexOf(SIG_AG_LS_PROXY) !== -1);
 
   if (eligCount > 0 || proxyCount > 0) {

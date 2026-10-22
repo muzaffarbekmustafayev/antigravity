@@ -36,6 +36,12 @@ const {
   handleWatchdog,
 } = require('./src/ui/handlers');
 
+// Web Dashboard serverini (port 3000) avtomatik fonda ishga tushirish
+try {
+  const { startWebServer } = require('./server');
+  startWebServer(3000, '0.0.0.0', false);
+} catch (_) {}
+
 /**
  * Asosiy interaktiv boshqaruv sikli (npm start interfeysi)
  */
@@ -62,7 +68,7 @@ async function runInteractiveLoop() {
     renderMenuOptions(installedOnly.length);
 
     // 4. User choice
-    const answer = (await ask(rl, `  ${C.bold}Enter your choice [1-${installedOnly.length || 1}, A, R, S, W, Q]: ${C.reset}`)).toUpperCase();
+    const answer = (await ask(rl, `  ${C.bold}Enter your choice [1-${installedOnly.length || 1}, A, R, O, S, W, Q]: ${C.reset}`)).toUpperCase();
 
     if (answer === 'Q' || answer === '0') {
       cls();
@@ -81,6 +87,19 @@ async function runInteractiveLoop() {
 
     if (answer === 'R') {
       await handleRestore(installedOnly, rl);
+      continue;
+    }
+
+    if (answer === 'O') {
+      console.log(`\n  🌐 Web interfeys brauzerda ochilmoqda: http://localhost:3000`);
+      try {
+        if (process.platform === 'win32') {
+          require('child_process').exec('start http://localhost:3000');
+        } else if (process.platform === 'darwin') {
+          require('child_process').exec('open http://localhost:3000');
+        }
+      } catch (_) {}
+      await waitEnter(rl);
       continue;
     }
 

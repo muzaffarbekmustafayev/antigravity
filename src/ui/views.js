@@ -74,6 +74,7 @@ function renderMenuOptions(installedCount) {
     console.log(`    ${C.bold}[A]${C.reset}      Patch ALL detected installations (${C.green}Recommended${C.reset})`);
     console.log(`    ${C.bold}[R]${C.reset}      Restore original files (Restore / Unpatch)`);
   }
+  console.log(`    ${C.bold}[O]${C.reset}      Open Web Dashboard (http://localhost:3000)`);
   console.log(`    ${C.bold}[S]${C.reset}      System status & diagnostics (Network, DNS, NRPT)`);
   console.log(`    ${C.bold}[W]${C.reset}      Start Watchdog daemon (Auto-repatch background observer)`);
   console.log(`    ${C.bold}[Q]${C.reset}      Quit`);

@@ -53,7 +53,7 @@ const {
 let _installedByUs = false;
 
 /**
- * SmartDNS va Hosts/NRPT orqali to'liq unlock qilish
+ * SmartDNS va NRPT orqali to'liq unlock qilish (VPN-siz, to'g'ridan-to'g'ri mustaqil rejim)
  */
 async function setup(options = {}) {
   const config = require('../config');
@@ -65,31 +65,10 @@ async function setup(options = {}) {
     return { ok: false, error: 'DNS bypass faqat Windows tizimida mavjud.' };
   }
 
-  const mode = (options.mode || config.DNS_MODE || 'hosts').toLowerCase();
   const egress = detectEgress();
   const ifName = egress?.ifName ?? null;
 
-  // 1. Hosts rejimi (Birlamchi, VPN-safe, Port 53 ga umuman tegmaydi)
-  if (mode === 'hosts') {
-    // Port 53 relay'ni to'xtatamiz va NRPT qoidalarini tozalaymiz
-    stopRelay();
-    removeNrptRules();
-
-    const hostsRes = await pinHostsFallback(ifName);
-    if (hostsRes && hostsRes.ok) {
-      flushDnsCache();
-      _installedByUs = true;
-      return {
-        ok: true,
-        method: 'hosts',
-        ifName,
-        note: 'hosts fayli orqali faollashtirildi (Port 53 bo\'sh, VPN-safe)'
-      };
-    }
-    return { ok: false, ifName, error: hostsRes?.error || 'Hosts faylini yangilab bo\'lmadi' };
-  }
-
-  // 2. NRPT rejimi (Eski usul, faqat majburiy so'ralganda)
+  // Har doim hosts faylini tozalash (soxta yoki o'lik IP lar qolib ketmasligi uchun)
   removeHostsEntries();
 
   try {
