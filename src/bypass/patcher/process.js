@@ -28,6 +28,20 @@ function killAffectedProcesses() {
   }
 }
 
+function isIdeRunning() {
+  if (os.platform() !== 'win32') return false;
+  try {
+    const out = execFileSync('tasklist.exe', ['/FI', 'IMAGENAME eq Antigravity*', '/NH'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      windowsHide: true,
+    });
+    return /antigravity/i.test(out);
+  } catch (_) {
+    return false;
+  }
+}
+
 /**
  * Xavfsiz asinxron kutish
  */
@@ -124,6 +138,7 @@ function writeBinary(binPath, data, onWriteSuccess = null) {
 
 module.exports = {
   killAffectedProcesses,
+  isIdeRunning,
   sleep,
   sleepSync,
   writeAtomic,

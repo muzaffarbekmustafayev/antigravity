@@ -90,16 +90,32 @@ app.post('/api/patch', async (req, res) => {
     const all = patch.detectInstallations();
     const installed = all.filter(i => i.status === 'found');
 
+    const { isIdeRunning } = require('./src/bypass/patcher/process');
+    const ideRunning = isIdeRunning();
+
     if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex < installed.length) {
       const inst = installed[targetIndex];
       const r = patch.patchInstallation(inst, { force: true });
       const dnsRes = await dnsBypass.setup();
-      return res.json({ ok: true, target: inst.name, patchResult: r, dnsResult: dnsRes });
+      return res.json({
+        ok: true,
+        target: inst.name,
+        patchResult: r,
+        dnsResult: dnsRes,
+        ideRunning,
+        message: ideRunning ? 'Patch qo\'llandi! Antigravity IDE ochiq bo\'lgani uchun IDE oynasidagi ko\'k "Reload" tugmasini bosing.' : 'Muvaffaqiyatli patchlandi!'
+      });
     }
 
     // Patch all
     const r = await bypass.enable({ force: true });
-    res.json({ ok: true, patchResult: r.patch, dnsResult: r.dns });
+    res.json({
+      ok: true,
+      patchResult: r.patch,
+      dnsResult: r.dns,
+      ideRunning,
+      message: ideRunning ? 'Patch qo\'llandi! Antigravity IDE ochiq bo\'lgani uchun IDE oynasidagi ko\'k "Reload" tugmasini bosing.' : 'Muvaffaqiyatli patchlandi!'
+    });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

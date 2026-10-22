@@ -401,6 +401,9 @@
         });
         if (json.ok) {
           log('✓ Antigravity patch process completed successfully!', 'success');
+          if (json.ideRunning) {
+            log('ℹ Antigravity IDE hozirda ochiq. Yangi patch kuchga kirishi uchun IDE oynasidagi ko\'k "Reload" tugmasini bosing!', 'cyan');
+          }
           if (json.patchResult) {
             log(`   • Binaries patched: ${json.patchResult.ok || 0}`, 'success');
             log(`   • IDE / JS scripts: ${json.patchResult.jsPatched || 0}`, 'success');

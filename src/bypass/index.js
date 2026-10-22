@@ -52,8 +52,12 @@ async function enable(options = {}) {
     };
   }
 
-  // 1. Kill running CLI processes (never IDE)
-  patch.killAffectedProcesses();
+  // Faqat haqiqatdan patch qilinishi kerak bo'lgan unpatched fayllar bo'lsa jarayon to'xtatiladi
+  const allInstalls = patch.detectInstallations();
+  const needsPatch = allInstalls.some(i => i.status === 'found' && i.patch !== 'already patched');
+  if (needsPatch) {
+    patch.killAffectedProcesses();
+  }
 
   // 2. Patch binaries
   const patchResult = patch.patchAllInstalls(options);
