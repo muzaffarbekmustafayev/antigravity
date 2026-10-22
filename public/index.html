@@ -41,9 +41,9 @@
       </div>
 
       <div class="flex items-center gap-3">
-        <div id="connectionBadge" class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 text-xs font-mono">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>ONLINE</span>
+        <div id="connectionBadge" class="flex items-center gap-2 px-3 py-1 rounded-full bg-gray-900 border border-gray-700 text-gray-400 text-xs font-mono">
+          <span class="w-2 h-2 rounded-full bg-gray-500"></span>
+          <span>CHECKING...</span>
         </div>
         <button onclick="refreshAll()" class="text-xs px-3 py-1.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 transition flex items-center gap-1.5 font-medium">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
@@ -55,6 +55,24 @@
 
   <!-- Main Container -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
+    <!-- Server Offline Warning Alert Banner -->
+    <div id="backendOfflineBanner" class="hidden bg-red-950/70 border border-red-800 text-red-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-start gap-3">
+        <div class="p-2 bg-red-900/60 border border-red-700/60 rounded-lg text-red-400 shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-white">Backend Server (Node.js) ishga tushmagan!</h2>
+          <p class="text-xs text-red-300/90 mt-1">
+            Siz sahifani statik server (Live Server port 5500) orqali ochgansiz. API va patcher ishlashi uchun terminalda <code class="bg-black/50 px-1.5 py-0.5 rounded text-cyan-300 font-mono">npm run dev</code> yoki <code class="bg-black/50 px-1.5 py-0.5 rounded text-cyan-300 font-mono">node server.js</code> ni ishga tushiring va brauzerda <a href="http://localhost:3000" class="underline font-bold text-white hover:text-cyan-300">http://localhost:3000</a> manziliga kiring.
+          </p>
+        </div>
+      </div>
+      <button onclick="refreshAll()" class="px-3.5 py-1.5 rounded-lg bg-red-800 hover:bg-red-700 text-white text-xs font-semibold shrink-0 transition">
+        Qayta urinish
+      </button>
+    </div>
+
     <!-- Quick Notice Banner for Port 53 / 127.0.0.53 -->
     <div class="bg-gradient-to-r from-blue-950/40 via-cyan-950/30 to-purple-950/30 border border-cyan-800/40 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
       <div class="flex items-start gap-3">
@@ -127,17 +145,17 @@
           Clean Caches & Temp Files
         </button>
 
-        <a href="/api/scripts/clean-hosts.bat" download class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-cyan-400 text-xs font-semibold border border-gray-700 flex items-center gap-2 transition">
+        <a id="linkCleanHosts" href="/api/scripts/clean-hosts.bat" download class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-cyan-400 text-xs font-semibold border border-gray-700 flex items-center gap-2 transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
           Download clean-hosts.bat
         </a>
 
-        <a href="/api/download/exe" download class="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-cyan-950/40 transition">
+        <a id="linkDownloadExe" href="/api/download/exe" download class="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-cyan-950/40 transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
           Download antigravity-bypass.exe
         </a>
 
-        <a href="/api/scripts/fix-nrpt.ps1" download class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-purple-400 text-xs font-semibold border border-gray-700 flex items-center gap-2 transition">
+        <a id="linkFixNrpt" href="/api/scripts/fix-nrpt.ps1" download class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-purple-400 text-xs font-semibold border border-gray-700 flex items-center gap-2 transition">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
           Download fix-nrpt.ps1
         </a>
@@ -199,6 +217,69 @@
   </footer>
 
   <script>
+    // Server bazaviy URL manzili:
+    // Agar sahifa Live Server (masalan, port 5500) yoki boshqa port orqali ochilgan bo'lsa,
+    // so'rovlarni avtomatik ravishda Node.js server (http://localhost:3000) ga yo'naltiramiz.
+    const API_BASE = (window.location.protocol.startsWith('http') && window.location.port !== '3000')
+      ? 'http://localhost:3000'
+      : '';
+
+    function updateBackendStatus(isOnline, errMessage = '') {
+      const badge = document.getElementById('connectionBadge');
+      const banner = document.getElementById('backendOfflineBanner');
+      if (isOnline) {
+        if (badge) {
+          badge.className = 'flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 text-xs font-mono';
+          badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>ONLINE (:3000)</span>';
+        }
+        if (banner) banner.classList.add('hidden');
+      } else {
+        if (badge) {
+          badge.className = 'flex items-center gap-2 px-3 py-1 rounded-full bg-red-950/60 border border-red-800/60 text-red-400 text-xs font-mono';
+          badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span><span>OFFLINE</span>';
+        }
+        if (banner) banner.classList.remove('hidden');
+        if (errMessage) {
+          log(`⚠ ${errMessage}`, 'error');
+        }
+      }
+    }
+
+    async function apiRequest(endpoint, options = {}) {
+      const url = `${API_BASE}${endpoint}`;
+      let res;
+      try {
+        res = await fetch(url, options);
+      } catch (err) {
+        updateBackendStatus(false, `Node.js serverga ulanib bo'lmadi (${url}). Terminalda "npm run dev" yoki "node server.js" ni ishga tushiring!`);
+        throw new Error(`Node.js server ishlamayapti (${url}).`);
+      }
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        updateBackendStatus(false, `Serverdan JSON o'rniga HTML qaytdi (${res.status}). Live Server o'rniga http://localhost:3000 dan foydalaning!`);
+        throw new Error(`Serverdan kutilmagan HTML javob keldi (${res.status}).`);
+      }
+
+      const json = await res.json();
+      updateBackendStatus(true);
+      return json;
+    }
+
+    function setupDownloadLinks() {
+      if (API_BASE) {
+        ['linkCleanHosts', 'linkDownloadExe', 'linkFixNrpt'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            const raw = el.getAttribute('href');
+            if (raw && raw.startsWith('/')) {
+              el.href = `${API_BASE}${raw}`;
+            }
+          }
+        });
+      }
+    }
+
     function log(msg, type = 'info') {
       const box = document.getElementById('consoleOutput');
       const div = document.createElement('div');
@@ -221,26 +302,26 @@
 
     async function fetchNetwork() {
       try {
-        const res = await fetch('/api/network');
-        const json = await res.json();
+        const json = await apiRequest('/api/network');
         if (json.ok && json.data) {
           const d = json.data;
           document.getElementById('statIp').textContent = d.ip || 'Unknown';
           document.getElementById('statOrg').textContent = 'ISP: ' + (d.org || 'Unknown');
           document.getElementById('statGeo').textContent = (d.country || 'Unknown');
           document.getElementById('statCity').textContent = 'City: ' + (d.city || 'Unknown');
-          log(`🌐 Network detected: ${d.ip} (${d.country || ''}, ${d.city || ''})`, 'cyan');
+          log(`🌐 Tarmoq aniqlandi: ${d.ip} (${d.country || ''}, ${d.city || ''})`, 'cyan');
         }
       } catch (e) {
-        log('Failed to fetch network info: ' + e.message, 'error');
+        document.getElementById('statIp').textContent = 'Xato';
+        document.getElementById('statGeo').textContent = 'Topilmadi';
+        log('Tarmoq ma\'lumotini olib bo\'lmadi: ' + e.message, 'error');
       }
     }
 
     async function loadInstallations() {
       const tbody = document.getElementById('installationsTableBody');
       try {
-        const res = await fetch('/api/installations');
-        const json = await res.json();
+        const json = await apiRequest('/api/installations');
         if (json.ok && Array.isArray(json.data)) {
           const list = json.data;
           const found = list.filter(i => i.status === 'found');
@@ -294,8 +375,7 @@
     async function freePortAction() {
       log('⚡ Releasing port 127.0.0.53:53 and killing occupying processes...', 'cyan');
       try {
-        const res = await fetch('/api/free-port', { method: 'POST' });
-        const json = await res.json();
+        const json = await apiRequest('/api/free-port', { method: 'POST' });
         if (json.ok) {
           log(`✓ ${json.message}`, 'success');
         } else {
@@ -309,8 +389,11 @@
     async function patchAllAction() {
       log('⚡ Starting full Antigravity unlock & patch sequence...', 'cyan');
       try {
-        const res = await fetch('/api/patch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
-        const json = await res.json();
+        const json = await apiRequest('/api/patch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
         if (json.ok) {
           log('✓ Antigravity patch process completed successfully!', 'success');
           if (json.patchResult) {
@@ -332,12 +415,11 @@
     async function patchSingleAction(index) {
       log(`⚡ Patching installation index [${index + 1}]...`, 'cyan');
       try {
-        const res = await fetch('/api/patch', {
+        const json = await apiRequest('/api/patch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ targetIndex: index })
         });
-        const json = await res.json();
         if (json.ok) {
           log(`✓ Target "${json.target}" patched successfully!`, 'success');
           loadInstallations();
@@ -352,12 +434,11 @@
     async function testDnsAction() {
       log('🌐 Querying Google Antigravity endpoints through SmartDNS DoH race pool...', 'cyan');
       try {
-        const res = await fetch('/api/dns/test', {
+        const json = await apiRequest('/api/dns/test', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ hostname: 'generativelanguage.googleapis.com' })
         });
-        const json = await res.json();
         if (json.ok) {
           log(`✓ Resolution test passed: ${json.hostname}`, 'success');
           log(`   Provider: ${json.provider} (${json.latencyMs}ms)`, 'success');
@@ -374,8 +455,7 @@
       if (!confirm('Are you sure you want to restore original backups and remove DNS bypass?')) return;
       log('🔄 Restoring original backups...', 'cyan');
       try {
-        const res = await fetch('/api/restore', { method: 'POST' });
-        const json = await res.json();
+        const json = await apiRequest('/api/restore', { method: 'POST' });
         if (json.ok) {
           log('✓ All installations restored to original state.', 'success');
           loadInstallations();
@@ -390,8 +470,7 @@
     async function cleanAction() {
       log('🧹 Cleaning temporary files and freeing relay port...', 'cyan');
       try {
-        const res = await fetch('/api/clean', { method: 'POST' });
-        const json = await res.json();
+        const json = await apiRequest('/api/clean', { method: 'POST' });
         if (json.ok) {
           log(`✓ ${json.message}`, 'success');
         } else {
@@ -403,6 +482,7 @@
     }
 
     function refreshAll() {
+      setupDownloadLinks();
       fetchNetwork();
       loadInstallations();
     }
