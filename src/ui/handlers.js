@@ -172,9 +172,16 @@ async function handleStatus(allInstalls, rl) {
   }
   console.log('');
 
-  const nrptApplied = dnsBypass.isNrptApplied();
-  console.log(`  ${C.bold}${C.cyan}DNS & NRPT RULES:${C.reset}`);
-  console.log(`  • NRPT status: ${nrptApplied ? C.green + 'Active (SmartDNS bypass enabled)' : C.yellow + 'Clean (Default provider)'}${C.reset}`);
+  const dnsStat = dnsBypass.status(true);
+  console.log(`  ${C.bold}${C.cyan}DNS & NETWORK ROUTING:${C.reset}`);
+  if (dnsStat.hostsApplied) {
+    console.log(`  • Bypass Mode:   ${C.green}Hosts File (Active ✓ - VPN Safe, Port 53 Free)${C.reset}`);
+  } else if (dnsStat.nrptApplied) {
+    console.log(`  • Bypass Mode:   ${C.yellow}NRPT / SmartDNS (Active)${C.reset}`);
+  } else {
+    console.log(`  • Bypass Mode:   ${C.dim}Clean / Default${C.reset}`);
+  }
+  console.log(`  • Port 53 Relay: ${dnsStat.relayRunning ? C.yellow + 'Active' : C.green + 'Free (Zero conflict with VPN)'}${C.reset}`);
 
   await waitEnter(rl);
 }

@@ -9,7 +9,7 @@ const fs   = require('fs');
 const path = require('path');
 const os   = require('os');
 const { execFileSync } = require('child_process');
-const { HOSTS_BEGIN, HOSTS_END, AG_HOSTNAMES, PROVIDERS } = require('./constants');
+const { HOSTS_BEGIN, HOSTS_END, AG_HOSTNAMES, PROVIDERS, DEFAULT_FALLBACK_IPS } = require('./constants');
 const { resolveViaProvider } = require('./forwarder');
 const Logger = require('../../logger');
 
@@ -72,6 +72,17 @@ function ensureHostsWritable(filePath) {
   } catch (_) {}
 }
 
+function isHostsApplied() {
+  try {
+    const p = hostsPath();
+    if (!fs.existsSync(p)) return false;
+    const cur = fs.readFileSync(p, 'utf8');
+    return cur.includes(HOSTS_BEGIN) || cur.includes(LEGACY_HOSTS_BEGIN);
+  } catch (_) {
+    return false;
+  }
+}
+
 function writeHostsEntries(entries) {
   try {
     const p = hostsPath();
@@ -84,7 +95,25 @@ function writeHostsEntries(entries) {
     const upd = replaceHostsBlock(cur, entries.length ? renderHostsBlock(entries) : null);
 
     if (upd !== cur) {
-      fs.writeFileSync(p, upd, 'utf8');
+      try {
+        fs.writeFileSync(p, upd, 'utf8');
+      } catch (writeErr) {
+        if (os.platform() === 'win32' && (writeErr.code === 'EPERM' || writeErr.code === 'EACCES')) {
+          // Administrator huquqi bilan vaqtinchalik fayldan nusxalash
+          const tmpFile = path.join(os.tmpdir(), `ag_hosts_${Date.now()}.tmp`);
+          fs.writeFileSync(tmpFile, upd, 'utf8');
+          const psScript = `Copy-Item -Path '${tmpFile}' -Destination '${p}' -Force; Remove-Item -Path '${tmpFile}' -Force`;
+          const encoded = Buffer.from(`[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; ${psScript}`, 'utf16le').toString('base64');
+          execFileSync('powershell.exe', [
+            '-NoProfile',
+            '-NonInteractive',
+            '-Command',
+            `Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList '-NoProfile -NonInteractive -EncodedCommand ${encoded}'`
+          ], { windowsHide: true });
+        } else {
+          throw writeErr;
+        }
+      }
       Logger.debug('Hosts fayli muvaffaqiyatli yangilandi.');
     }
     return { ok: true };
@@ -108,6 +137,7 @@ function removeHostsEntries() {
 
 async function pinHostsFallback(ifName) {
   try {
+    const defaultIp = (DEFAULT_FALLBACK_IPS && DEFAULT_FALLBACK_IPS[0]) || '91.132.224.167';
     const promises = AG_HOSTNAMES.map(async (hostname) => {
       for (const p of PROVIDERS) {
         try {
@@ -117,12 +147,12 @@ async function pinHostsFallback(ifName) {
           }
         } catch (_) {}
       }
-      return null;
+      // Agar barcha provayderlar vaqtinchalik javob bermasa, sinovdan o'tgan ishonchli IP
+      return { hostname, ip: defaultIp };
     });
 
     const entries = (await Promise.all(promises)).filter(Boolean);
 
-    // Faqat haqiqiy DNS orqali aniqlangan ishonchli IP manzillarini yozamiz
     if (entries.length > 0) {
       Logger.debug(`Hosts fayli uchun ${entries.length} ta domen IP manzillari muvaffaqiyatli aniqlandi.`);
       return writeHostsEntries(entries);
@@ -137,6 +167,7 @@ module.exports = {
   hostsPath,
   renderHostsBlock,
   replaceHostsBlock,
+  isHostsApplied,
   writeHostsEntries,
   removeHostsEntries,
   pinHostsFallback,

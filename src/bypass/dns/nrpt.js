@@ -7,7 +7,7 @@
 
 const os   = require('os');
 const { execFileSync } = require('child_process');
-const { NRPT_TAG, AG_HOSTNAMES } = require('./constants');
+const { NRPT_TAG, NRPT_TAGS, AG_HOSTNAMES } = require('./constants');
 const Logger = require('../../logger');
 
 /**
@@ -53,15 +53,32 @@ function psStringList(items) {
 
 function removeNrptRules() {
   if (os.platform() !== 'win32') return;
-  const tags = [NRPT_TAG];
   const hostnamesList = psStringList(AG_HOSTNAMES);
   const script = `
 if (-not (Get-Command Get-DnsClientNrptRule -ErrorAction SilentlyContinue)) { exit 0 }
-$tags=@(${psStringList(tags)});
-$hosts=@(${hostnamesList});
-Get-DnsClientNrptRule -ErrorAction SilentlyContinue |
-  Where-Object { $tags -contains $_.Comment -or $hosts -contains $_.Namespace } |
-  Remove-DnsClientNrptRule -Force -ErrorAction SilentlyContinue;
+$rules = Get-DnsClientNrptRule -ErrorAction SilentlyContinue;
+if (-not $rules) { exit 0 }
+$hosts = @(${hostnamesList});
+foreach ($rule in $rules) {
+  $match = $false;
+  if ($rule.Name -like 'ANTIGRAVITY*' -or $rule.Name -like 'AG_*') { $match = $true }
+  if ($rule.Comment -like '*ANTIGRAVITY*' -or $rule.Comment -like '*AG_*') { $match = $true }
+  if (-not $match -and $rule.Namespace) {
+    foreach ($ns in $rule.Namespace) {
+      $clean = $ns.TrimStart('.').Trim();
+      if ($hosts -contains $clean) { $match = $true; break }
+    }
+  }
+  if ($match) {
+    try {
+      Remove-DnsClientNrptRule -Name $rule.Name -Force -ErrorAction SilentlyContinue
+    } catch {}
+    $reg = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Dnscache\\Parameters\\DnsPolicyConfig\\' + $rule.Name;
+    if (Test-Path $reg) {
+      Remove-Item -Path $reg -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  }
+}
 Clear-DnsClientCache -ErrorAction SilentlyContinue`.trim();
 
   runPowershell(script);

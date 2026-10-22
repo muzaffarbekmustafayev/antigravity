@@ -42,6 +42,7 @@ const {
   writeHostsEntries,
   removeHostsEntries,
   pinHostsFallback,
+  isHostsApplied,
 } = require('./dns/hosts');
 
 const {
@@ -52,20 +53,44 @@ const {
 let _installedByUs = false;
 
 /**
- * SmartDNS va NRPT orqali to'liq unlock qilish
+ * SmartDNS va Hosts/NRPT orqali to'liq unlock qilish
  */
 async function setup(options = {}) {
   const config = require('../config');
   if (config.SAFE_MODE && !config.ENABLE_SYSTEM_BYPASS && !options.force) {
-    return { ok: false, error: 'Xavfsiz rejim (SAFE_MODE): Tizim DNS sozlamalarini o\'zgartirish bloklangan.' };
+    return { ok: false, error: 'Xavfsiz rejim (SAFE_MODE): Tizim sozlamalarini o\'zgartirish bloklangan.' };
   }
 
   if (os.platform() !== 'win32') {
-    return { ok: false, error: 'DNS NRPT bypass faqat Windows tizimida mavjud.' };
+    return { ok: false, error: 'DNS bypass faqat Windows tizimida mavjud.' };
   }
 
+  const mode = (options.mode || config.DNS_MODE || 'hosts').toLowerCase();
   const egress = detectEgress();
   const ifName = egress?.ifName ?? null;
+
+  // 1. Hosts rejimi (Birlamchi, VPN-safe, Port 53 ga umuman tegmaydi)
+  if (mode === 'hosts') {
+    // Port 53 relay'ni to'xtatamiz va NRPT qoidalarini tozalaymiz
+    stopRelay();
+    removeNrptRules();
+
+    const hostsRes = await pinHostsFallback(ifName);
+    if (hostsRes && hostsRes.ok) {
+      flushDnsCache();
+      _installedByUs = true;
+      return {
+        ok: true,
+        method: 'hosts',
+        ifName,
+        note: 'hosts fayli orqali faollashtirildi (Port 53 bo\'sh, VPN-safe)'
+      };
+    }
+    return { ok: false, ifName, error: hostsRes?.error || 'Hosts faylini yangilab bo\'lmadi' };
+  }
+
+  // 2. NRPT rejimi (Eski usul, faqat majburiy so'ralganda)
+  removeHostsEntries();
 
   try {
     await startRelay(egress);
@@ -77,7 +102,6 @@ async function setup(options = {}) {
 
   if (!isNrptApplied()) {
     removeNrptRules();
-    removeHostsEntries();
 
     const nameservers = [RELAY_IP];
     if (egress) {
@@ -126,9 +150,13 @@ function teardown(force = false) {
  */
 function status(deep = false) {
   const relayEgress = getRelayEgress();
+  const hostsActive = isHostsApplied();
+  const nrptActive  = deep ? isNrptApplied() : (_installedByUs || isRelayActive());
   return {
+    mode: hostsActive ? 'hosts' : (nrptActive ? 'nrpt' : 'none'),
+    hostsApplied: hostsActive,
     relayRunning: isRelayActive(),
-    nrptApplied:  deep ? isNrptApplied() : (_installedByUs || isRelayActive()),
+    nrptApplied:  nrptActive,
     ifName:       relayEgress?.ifName ?? null,
   };
 }
@@ -144,6 +172,7 @@ module.exports = {
   installNrptRules,
   removeNrptRules,
   isNrptApplied,
+  isHostsApplied,
   flushDnsCache,
   detectEgress,
   findSubstitutingProviders,

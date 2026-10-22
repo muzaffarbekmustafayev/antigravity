@@ -20,6 +20,7 @@ const AGY_BIN_PATH        = getAgyBinPath();
 const AGY_BIN             = AGY_BIN_PATH.includes(' ') ? `"${AGY_BIN_PATH}"` : AGY_BIN_PATH;
 const ENABLE_SYSTEM_BYPASS = process.env.ENABLE_SYSTEM_BYPASS !== 'false';
 const SAFE_MODE            = process.env.SAFE_MODE === 'true';
+const DNS_MODE             = (process.env.DNS_MODE || 'hosts').toLowerCase().trim();
 
 let globalCountry = (process.env.DEFAULT_COUNTRY || process.env.AGY_COUNTRY || 'nl').trim();
 
@@ -48,6 +49,7 @@ module.exports = {
   AGY_BIN_PATH,
   ENABLE_SYSTEM_BYPASS,
   SAFE_MODE,
+  DNS_MODE,
   getDefaultCountry,
   setDefaultCountry,
   getEffectiveCountry,

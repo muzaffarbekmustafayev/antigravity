@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node cli.js",
+    "launch": "powershell -Command \"Start-Process powershell -ArgumentList '-ExecutionPolicy Bypass -File .\\launch.ps1' -Verb RunAs\"",
     "patch": "node patcher.js",
     "status": "node cli.js status",
     "restore": "node cli.js restore",
