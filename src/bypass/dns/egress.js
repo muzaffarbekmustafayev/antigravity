@@ -33,13 +33,20 @@ function detectEgress() {
   if (os.platform() !== 'win32') return detectEgressUnix();
 
   const script = `
-$phys=@(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$_.ifIndex});
 $def=@(Get-NetRoute -DestinationPrefix '0.0.0.0/0' -PolicyStore ActiveStore -ErrorAction SilentlyContinue);
+$phys=@(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$_.ifIndex});
 $mine=@($def | Where-Object {$phys -contains $_.ifIndex -and $_.NextHop -ne '0.0.0.0'});
+if ($mine.Count -eq 0) {
+  $mine=@($def | Where-Object {$_.NextHop -ne '0.0.0.0'});
+}
+if ($mine.Count -eq 0) {
+  $mine=@($def);
+}
 if ($mine.Count -eq 0) { 'none' } else {
   $best=$mine | Sort-Object {[int]$_.RouteMetric + [int](Get-NetIPInterface -InterfaceIndex $_.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).InterfaceMetric} | Select-Object -First 1;
   $ad=(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object {$_.ifIndex -eq $best.ifIndex});
-  '{0}|{1}|{2}' -f $best.ifIndex,$best.NextHop,$ad.Name
+  $adName = if ($ad) { $ad.Name } else { (Get-NetIPInterface -InterfaceIndex $best.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).InterfaceAlias };
+  '{0}|{1}|{2}' -f $best.ifIndex,$best.NextHop,($adName -replace '[\r\n]','')
 }`.replace(/\r?\n/g, ' ').trim();
 
   try {

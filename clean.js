@@ -41,6 +41,15 @@ function clean() {
     }
   } catch (_) {}
 
+  // Clean lingering relay port processes
+  try {
+    const { freeRelayPort } = require('./src/bypass/dns/relay');
+    const killed = freeRelayPort();
+    if (killed > 0) {
+      console.log(`[+] Terminated ${killed} orphaned process(es) holding relay port.`);
+    }
+  } catch (_) {}
+
   console.log('[+] Cleaning completed successfully.');
 }
 

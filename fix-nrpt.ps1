@@ -19,6 +19,15 @@ foreach ($rule in $rules) {
 Write-Host ('Removed: ' + $count + ' rules')
 ipconfig /flushdns | Out-Null
 Clear-DnsClientCache -ErrorAction SilentlyContinue
-Write-Host 'DNS cache cleared'
+# Kill any orphaned processes holding relay port 127.0.0.53:53
+try {
+    Get-NetUDPEndpoint -LocalAddress 127.0.0.53 -LocalPort 53 -ErrorAction SilentlyContinue | ForEach-Object {
+        if ($_.OwningProcess -gt 4) {
+            Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
+            Write-Host ('Terminated process holding 127.0.0.53:53 (PID: ' + $_.OwningProcess + ')')
+        }
+    }
+} catch {}
+
 $remaining = (Get-DnsClientNrptRule).Count
 Write-Host ('Remaining rules: ' + $remaining)
