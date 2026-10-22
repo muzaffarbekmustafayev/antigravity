@@ -188,12 +188,6 @@ function patchIdeMainJs(jsPath) {
     return { ok: true, alreadyDone: true };
   }
 
-  // v2.4+ arxitekturasi: avtorizatsiya va geo-cheklov to'liq Language Server binar orqali bo'lsa
-  if ((content.includes('./languageServer') || content.includes('languageServer') || content.includes('language_server') || path.basename(jsPath) === 'extension.js') &&
-      !content.includes('_handleAuthErrorResponse') && !content.includes('"SET_INELIGIBLE"') && !content.includes("'SET_INELIGIBLE'") && !content.includes('ineligible_tiers')) {
-    return { ok: true, alreadyDone: true, note: 'v2+ arxitektura — tekshiruv Language Server orqali' };
-  }
-
   let modified = content;
   let changes = 0;
 

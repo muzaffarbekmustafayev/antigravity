@@ -137,7 +137,6 @@ function removeHostsEntries() {
 
 async function pinHostsFallback(ifName) {
   try {
-    const defaultIp = (DEFAULT_FALLBACK_IPS && DEFAULT_FALLBACK_IPS[0]) || '91.132.224.167';
     const promises = AG_HOSTNAMES.map(async (hostname) => {
       for (const p of PROVIDERS) {
         try {
@@ -147,8 +146,7 @@ async function pinHostsFallback(ifName) {
           }
         } catch (_) {}
       }
-      // Agar barcha provayderlar vaqtinchalik javob bermasa, sinovdan o'tgan ishonchli IP
-      return { hostname, ip: defaultIp };
+      return null;
     });
 
     const entries = (await Promise.all(promises)).filter(Boolean);

@@ -50,6 +50,15 @@ function clean() {
     }
   } catch (_) {}
 
+  // Clean hosts and NRPT bypass entries
+  try {
+    const { removeHostsEntries } = require('./src/bypass/dns/hosts');
+    const { removeNrptRules } = require('./src/bypass/dns/nrpt');
+    removeHostsEntries();
+    removeNrptRules();
+    console.log('[+] Cleaned hosts file and NRPT rules.');
+  } catch (_) {}
+
   console.log('[+] Cleaning completed successfully.');
 }
 

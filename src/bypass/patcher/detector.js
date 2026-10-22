@@ -80,42 +80,74 @@ function getFastVersion(targetPath, pkgPath = null) {
 }
 
 function findBinaryTargets(installRoot) {
-  const candidates = [];
+  const targets = new Set();
   try {
     if (fs.statSync(installRoot).isFile()) {
       return [installRoot];
     }
-  } catch (_) {}
+  } catch (_) {
+    return [];
+  }
 
   const isWin = os.platform() === 'win32';
   const ext = isWin ? '.exe' : '';
 
-  candidates.push(path.join(installRoot, `agy${ext}`));
-  candidates.push(path.join(installRoot, 'bin', `agy${ext}`));
-  candidates.push(path.join(installRoot, `language_server${ext}`));
-  candidates.push(path.join(installRoot, 'bin', `language_server${ext}`));
-  candidates.push(path.join(installRoot, `language_server_windows_x64${ext}`));
-  candidates.push(path.join(installRoot, 'bin', `language_server_windows_x64${ext}`));
-  candidates.push(path.join(installRoot, `language_server_windows_arm64${ext}`));
-  candidates.push(path.join(installRoot, 'bin', `language_server_windows_arm64${ext}`));
+  const staticCandidates = [
+    path.join(installRoot, `agy${ext}`),
+    path.join(installRoot, 'bin', `agy${ext}`),
+    path.join(installRoot, `language_server${ext}`),
+    path.join(installRoot, 'bin', `language_server${ext}`),
+    path.join(installRoot, `language_server_windows_x64${ext}`),
+    path.join(installRoot, 'bin', `language_server_windows_x64${ext}`),
+    path.join(installRoot, `language_server_windows_arm64${ext}`),
+    path.join(installRoot, 'bin', `language_server_windows_arm64${ext}`),
+    path.join(installRoot, 'resources', 'bin', `language_server${ext}`),
+    path.join(installRoot, 'resources', 'bin', `language_server_windows_x64${ext}`),
+    path.join(installRoot, 'resources', 'app', 'bin', `language_server${ext}`),
+    path.join(installRoot, 'resources', 'app', 'bin', `language_server_windows_x64${ext}`),
+    path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server_windows_x64${ext}`),
+    path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server${ext}`),
+    path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server_windows_arm64${ext}`),
+    path.join(installRoot, 'resources', 'app.asar.unpacked', 'extensions', 'antigravity', 'bin', `language_server_windows_x64${ext}`),
+    path.join(installRoot, 'resources', 'app.asar.unpacked', 'extensions', 'antigravity', 'bin', `language_server${ext}`),
+    path.join(installRoot, 'resources', 'app.asar.unpacked', 'bin', `language_server_windows_x64${ext}`),
+    path.join(installRoot, 'resources', 'app.asar.unpacked', 'bin', `language_server${ext}`),
+    path.join(installRoot, 'resources', 'app.asar.unpacked', 'out', `language_server_windows_x64${ext}`),
+    path.join(installRoot, 'dist', `language_server_windows_x64${ext}`),
+  ];
 
-  if (isWin) {
-    candidates.push(path.join(installRoot, 'resources', 'app', 'out', `language_server${ext}`));
-    candidates.push(path.join(installRoot, 'resources', `language_server${ext}`));
-    candidates.push(path.join(installRoot, 'resources', 'bin', `language_server${ext}`));
-    candidates.push(path.join(installRoot, 'resources', 'bin', `language_server_windows_x64${ext}`));
-    candidates.push(path.join(installRoot, 'resources', 'app', 'bin', `language_server${ext}`));
-    candidates.push(path.join(installRoot, 'resources', 'app', 'bin', `language_server_windows_x64${ext}`));
-    candidates.push(path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server_windows_x64${ext}`));
-    candidates.push(path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server${ext}`));
-    candidates.push(path.join(installRoot, 'resources', 'app', 'extensions', 'antigravity', 'bin', `language_server_windows_arm64${ext}`));
+  for (const c of staticCandidates) {
+    try {
+      if (fs.statSync(c).isFile()) targets.add(path.resolve(c));
+    } catch (_) {}
   }
-  candidates.push(path.join(installRoot, 'bin', `language_server_windows_x64${ext}`));
-  candidates.push(path.join(installRoot, 'dist', `language_server_windows_x64${ext}`));
 
-  return candidates.filter(p => {
-    try { return fs.statSync(p).isFile(); } catch (_) { return false; }
-  });
+  // Chuqur rekursiv skanerlash (barcha language_server*.exe larni aniqlash)
+  function deepScan(dir, depth = 0) {
+    if (depth > 6) return;
+    try {
+      const items = fs.readdirSync(dir, { withFileTypes: true });
+      for (const item of items) {
+        const full = path.join(dir, item.name);
+        if (item.isDirectory()) {
+          const lower = item.name.toLowerCase();
+          if (lower !== 'node_modules' && lower !== '.git' && lower !== 'locales') {
+            deepScan(full, depth + 1);
+          }
+        } else if (item.isFile()) {
+          const lower = item.name.toLowerCase();
+          if (lower.startsWith('language_server') || lower === 'agy.exe' || lower === 'agy') {
+            if (!lower.endsWith('.js') && !lower.endsWith('.json') && !lower.endsWith('.ag_backup') && !lower.endsWith('.ag_meta.json')) {
+              targets.add(path.resolve(full));
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  deepScan(installRoot);
+  return Array.from(targets);
 }
 
 function findIdeJsTargets(installRoot) {
@@ -324,11 +356,13 @@ function detectInstallations(force = false) {
       }
       if (foundDir) {
         const targetPath = path.join(foundDir, d.targetRel);
-        const extraBin = d.extraBinRel ? path.join(foundDir, d.extraBinRel) : null;
+        const extraBins = findBinaryTargets(foundDir);
         const hasTarget = fs.existsSync(targetPath);
         let size = null;
         if (hasTarget) {
           try { size = formatSize(fs.statSync(targetPath).size); } catch (_) {}
+        } else if (extraBins.length > 0) {
+          try { size = formatSize(fs.statSync(extraBins[0]).size); } catch (_) {}
         }
 
         const pkgPath = d.pkgRel ? path.join(foundDir, d.pkgRel) : null;
@@ -339,20 +373,25 @@ function detectInstallations(force = false) {
           if (d.type === 'ide') {
             try {
               const content = fs.readFileSync(targetPath, 'utf8');
-              patchStatus = isJsPatched(content) ? 'already patched' : 'not patched';
+              const jsDone = isJsPatched(content);
+              const binsDone = extraBins.length === 0 || extraBins.every(b => isBinaryPatched(b));
+              patchStatus = (jsDone && binsDone) ? 'already patched' : 'not patched';
             } catch (_) {}
           } else {
             const st = inspectFile(targetPath);
             patchStatus = st.eligibility === PatchState.PATCHED ? 'already patched' : 'not patched';
           }
+        } else if (extraBins.length > 0) {
+          const binsDone = extraBins.every(b => isBinaryPatched(b));
+          patchStatus = binsDone ? 'already patched' : 'not patched';
         }
 
         results.push({
           id: d.id,
           name: d.name,
-          target: hasTarget ? targetPath : 'Not found',
-          extraTargets: extraBin && fs.existsSync(extraBin) ? [extraBin] : [],
-          status: hasTarget ? 'found' : 'not found',
+          target: hasTarget ? targetPath : (extraBins.length > 0 ? extraBins[0] : 'Not found'),
+          extraTargets: extraBins,
+          status: (hasTarget || extraBins.length > 0) ? 'found' : 'not found',
           patch: patchStatus,
           version: ver || 'N/A',
           size: size || 'N/A',
