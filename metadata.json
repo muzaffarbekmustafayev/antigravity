@@ -1,4 +1,8 @@
 {
   "name": "Antigravity Bypass",
-  "description": "Google Antigravity regional bypass, binary patcher, and DNS unlocker for restricted regions"
+  "description": "Google Antigravity regional bypass, binary patcher, and DNS unlocker for restricted regions",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

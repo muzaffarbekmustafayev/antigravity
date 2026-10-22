@@ -7,6 +7,7 @@
     "antigravity-bypass": "cli.js"
   },
   "scripts": {
+    "dev": "node server.js",
     "start": "node cli.js",
     "patch": "node patcher.js",
     "status": "node cli.js status",
@@ -14,7 +15,7 @@
     "clean": "node clean.js",
     "clean:hosts": "clean-hosts.bat",
     "build:exe": "node build-exe.js",
-    "build": "node -c cli.js patcher.js src/logger.js src/bypass/index.js src/bypass/patch.js src/bypass/dns-bypass.js src/bypass/watchdog.js src/network.js src/config.js src/utils.js src/ui/colors.js src/ui/views.js src/ui/handlers.js src/bypass/patcher/constants.js src/bypass/patcher/process.js src/bypass/patcher/binary.js src/bypass/patcher/ide.js src/bypass/patcher/detector.js src/bypass/dns/constants.js src/bypass/dns/packet.js src/bypass/dns/forwarder.js src/bypass/dns/egress.js src/bypass/dns/relay.js src/bypass/dns/nrpt.js src/bypass/dns/hosts.js"
+    "build": "node -c server.js cli.js patcher.js src/logger.js src/bypass/index.js src/bypass/patch.js src/bypass/dns-bypass.js src/bypass/watchdog.js src/network.js src/config.js src/utils.js src/ui/colors.js src/ui/views.js src/ui/handlers.js src/bypass/patcher/constants.js src/bypass/patcher/process.js src/bypass/patcher/binary.js src/bypass/patcher/ide.js src/bypass/patcher/detector.js src/bypass/dns/constants.js src/bypass/dns/packet.js src/bypass/dns/forwarder.js src/bypass/dns/egress.js src/bypass/dns/relay.js src/bypass/dns/nrpt.js src/bypass/dns/hosts.js"
   },
   "pkg": {
     "scripts": [
@@ -27,7 +28,8 @@
     "outputPath": "dist"
   },
   "dependencies": {
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "express": "^5.3.0"
   },
   "devDependencies": {
     "javascript-obfuscator": "^5.9.0",

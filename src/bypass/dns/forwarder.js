@@ -113,7 +113,7 @@ function forwardUdp(queryBuf, serverIp, port = 53, localIfNameOrTimeout = null, 
     }, timeoutMs);
 
     try {
-      sock = dgram.createSocket('udp4');
+      sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
 
       sock.on('error', (err) => {
         Logger.debug(`UDP so'rovda xato (${serverIp}):`, err.message);
@@ -301,14 +301,20 @@ async function forwardToProviders(queryBuf, hostname, ifName, timeoutMs = 2500) 
 }
 
 function forwardToSystem(queryBuf, rinfo, server) {
-  const systemDns = dns.getServers()[0] || '8.8.8.8';
-  forwardUdp(queryBuf, systemDns).then(resp => {
-    if (resp && server) {
-      try {
-        server.send(resp, rinfo.port, rinfo.address);
-      } catch (_) {}
-    }
-  });
+  const servers = dns.getServers();
+  const targets = (servers && servers.length) ? servers : ['8.8.8.8'];
+  let answered = false;
+
+  for (const systemDns of targets) {
+    forwardUdp(queryBuf, systemDns, 53, null, 1800).then(resp => {
+      if (resp && server && !answered) {
+        answered = true;
+        try {
+          server.send(resp, rinfo.port, rinfo.address);
+        } catch (_) {}
+      }
+    }).catch(() => {});
+  }
 }
 
 function queryUdpDns(hostname, serverIp, timeoutMs = 2000, localIfName = null) {
